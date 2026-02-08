@@ -26,7 +26,8 @@
     .card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:26px;box-shadow:0 16px 40px var(--shadow)}
     .title{font-size:24px;font-weight:800;margin-bottom:10px}
     .row{display:flex;gap:.7rem;flex-wrap:wrap;align-items:center}
-    .btn{padding:.75rem 1.1rem;border-radius:12px;border:1px solid var(--border);background:#fff;cursor:pointer}
+    .btn{padding:.75rem 1.1rem;border-radius:12px;border:1px solid var(--border);background:#fff;cursor:pointer;transition:transform .12s ease}
+    .btn:active{transform:scale(.98)}
     .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border:none}
     .btn:disabled{opacity:.55;cursor:not-allowed}
     .txt{width:100%;padding:1rem;border-radius:14px;border:1px solid var(--border);font-size:18px}
@@ -46,8 +47,9 @@
       background:#fff;
       cursor:pointer;
       font-size:14px;
+      transition:transform .12s ease, box-shadow .12s ease;
     }
-    .ex-chip:hover{transform:translateY(-1px)}
+    .ex-chip:hover{transform:translateY(-1px);box-shadow:0 10px 24px rgba(13,38,76,.08)}
 
     /* Games */
     .section{margin-top:18px}
@@ -56,7 +58,7 @@
     .pill{display:inline-flex;align-items:center;gap:6px;padding:.25rem .65rem;border-radius:999px;background:#f3f8ff;border:1px solid var(--border);font-weight:900;font-size:13px;color:#194b7c}
     .games-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     @media (max-width: 900px){ .games-grid{grid-template-columns:1fr} }
-    .panel{border:1px solid var(--border);border-radius:18px;padding:16px;background:#fff}
+    .panel{border:1px solid var(--border);border-radius:18px;padding:16px;background:#fff;position:relative;overflow:hidden}
     .panel h3{margin:0 0 6px 0;font-size:18px;font-weight:900}
     .mini{font-size:14px;color:var(--muted);margin:6px 0 12px 0}
     .big{font-size:22px;font-weight:950;letter-spacing:.2px}
@@ -69,8 +71,25 @@
     .choice.wrong{border-color:#ef4444}
     .hintline{font-size:14px;color:var(--muted);margin-top:8px}
 
+    /* animations */
+    .pop{animation:pop .22s ease}
+    @keyframes pop{0%{transform:scale(.98)}60%{transform:scale(1.02)}100%{transform:scale(1)}}
+    .shake{animation:shake .28s ease}
+    @keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-6px)}50%{transform:translateX(6px)}75%{transform:translateX(-4px)}100%{transform:translateX(0)}}
+    .fadein{animation:fadein .35s ease}
+    @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
     /* confetti */
     #confettiCanvas{position:fixed;inset:0;pointer-events:none;z-index:9999;display:none}
+
+    /* Talk (offline) */
+    .chat{border:1px solid var(--border);border-radius:16px;background:#f7fbff;padding:12px;max-height:220px;overflow:auto}
+    .msg{padding:10px 12px;border-radius:14px;border:1px solid var(--border);background:#fff;margin:8px 0}
+    .msg.me{background:#eef6ff}
+    .msg .who{font-weight:900;font-size:13px;color:#194b7c;margin-bottom:4px}
+    .chatrow{display:flex;gap:10px;align-items:center;margin-top:10px}
+    .chatrow input{flex:1}
+    .tiny{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
@@ -85,7 +104,7 @@
   </div>
 
   <!-- Assistant -->
-  <div id="tab-as" class="card">
+  <div id="tab-as" class="card fadein">
     <div class="title">Assistant (Speak Komi)</div>
     <div class="examples" id="examples-as"></div>
 
@@ -99,7 +118,7 @@
   </div>
 
   <!-- Translator -->
-  <div id="tab-tr" class="card hidden">
+  <div id="tab-tr" class="card hidden fadein">
     <div class="title">English to Komi Translator</div>
     <div class="examples" id="examples-tr"></div>
 
@@ -113,38 +132,40 @@
   <!-- Games -->
   <div class="section">
     <div class="section-title">
-      <h2>Games (easy)</h2>
+      <h2>Games</h2>
       <span class="pill">Streak: <span id="streak">0</span></span>
       <span class="pill">Best: <span id="best">0</span></span>
     </div>
 
     <div class="games-grid">
-      <!-- Game 1: Flashcards -->
+      <!-- Game 1: Type Komi (NEW) -->
       <div class="panel">
-        <h3>Game 1 — Flashcards</h3>
-        <div class="mini">Click <b>Show Komi</b> to reveal the Komi word.</div>
+        <h3>Game 1 — Type Komi (Speed)</h3>
+        <div class="mini">We show <b>English</b>. You type <b>Komi</b> and press <b>Check</b>.</div>
 
         <div class="cardface">
           <div class="mini">English</div>
-          <div class="big" id="fc-en">Loading…</div>
+          <div class="big" id="tk-en">Loading…</div>
           <div class="divider"></div>
-          <div class="mini">Komi</div>
-          <div class="big" id="fc-komi" style="opacity:.25">•••</div>
+          <div class="mini">Type Komi</div>
+          <input id="tk-input" class="txt" style="margin-top:8px" placeholder="Type Komi here…" disabled />
         </div>
 
         <div class="row" style="margin-top:12px">
-          <button class="btn" id="fc-flip" disabled>Show Komi</button>
-          <button class="btn" id="fc-next" disabled>Next card</button>
-          <span class="pill">Score: <span id="fc-score">0</span></span>
+          <button class="btn" id="tk-reveal" disabled>Reveal</button>
+          <button class="btn primary" id="tk-check" disabled>Check</button>
+          <button class="btn" id="tk-next" disabled>Next</button>
+          <span class="pill">Score: <span id="tk-score">0</span></span>
+          <span class="pill">⏱ <span id="tk-time">30</span>s</span>
         </div>
 
-        <div class="hintline">Tip: Use these words to start — <b>Hello, Good day, Dog, Cat, Fish</b>.</div>
+        <div class="hintline" id="tk-hint">Type fast to build streak. Confetti on correct ✅</div>
       </div>
 
       <!-- Game 2: Listen & Pick -->
       <div class="panel">
         <h3>Game 2 — Listen & Pick</h3>
-        <div class="mini">Click <b>Play Komi</b> and choose what it means in English.</div>
+        <div class="mini">Click <b>Play Komi</b> and choose the meaning in English.</div>
 
         <div class="row" style="margin-bottom:10px">
           <button class="btn primary" id="lp-play" disabled>Play Komi</button>
@@ -157,6 +178,20 @@
 
         <div class="hintline">If you get it right — confetti 🎉</div>
       </div>
+    </div>
+
+    <!-- Extra WOW: Talk (offline mentor) -->
+    <div class="panel" style="margin-top:14px">
+      <h3>Bonus — Talk (Offline Mentor)</h3>
+      <div class="mini">Ask something simple like: <b>hello</b>, <b>how to say dog</b>, <b>give me a phrase</b>. (No internet.)</div>
+
+      <div class="chat" id="chat"></div>
+      <div class="chatrow">
+        <input id="chat-in" class="txt" placeholder="Type message…" disabled />
+        <button class="btn primary" id="chat-send" disabled>Send</button>
+        <button class="btn" id="chat-voice" disabled>Voice</button>
+      </div>
+      <div class="tiny">Voice uses your browser’s built-in speech (still offline). If no voice available — it will just show text.</div>
     </div>
   </div>
 </div>
@@ -199,7 +234,7 @@
   const statusEl = H('as-status');
   const setScore = v=> H('as-bar').style.width = Math.max(0, Math.min(100, v)) + '%';
   const hideStatus = ()=>{ statusEl.classList.add('hidden'); statusEl.textContent=''; };
-  const showScore  = (s)=>{ statusEl.textContent = 'Score: ' + s + ' / 100'; statusEl.classList.remove('hidden'); };
+  const showScore  = (s)=>{ statusEl.textContent = 'Score: ' + s + ' / 100'; statusEl.classList.remove('hidden'); statusEl.classList.add('pop'); setTimeout(()=>statusEl.classList.remove('pop'), 250); };
 
   // Words we use everywhere (simple & clear)
   const START_WORDS = [
@@ -296,6 +331,7 @@
     if(!DICT) return;
     const {out} = mapLongest(toks(H('src').value), DICT, 4);
     H('out').textContent = finalize(out);
+    H('out').classList.add('pop'); setTimeout(()=>H('out').classList.remove('pop'), 250);
   }
   H('do').addEventListener('click', translate);
   H('src').addEventListener('keydown', e => { if(e.key==='Enter' && (e.ctrlKey||e.metaKey)) translate(); });
@@ -380,31 +416,92 @@
     return arr;
   }
 
-  // Game 1: Flashcards (super simple)
-  let fc = { flipped:false, score:0, current:null };
-  function initFlashcards(){
-    H('fc-flip').disabled = false;
-    H('fc-next').disabled = false;
+  // Game 1: Type Komi (Speed) — NEW
+  let tk = { current:null, score:0, time:30, timer:null, locked:false };
+  function initTypeKomi(){
+    H('tk-reveal').disabled = false;
+    H('tk-check').disabled = false;
+    H('tk-next').disabled = false;
+    H('tk-input').disabled = false;
 
-    fc.score = 0;
-    H('fc-score').textContent = '0';
-    nextFlashcard();
+    tk.score = 0;
+    H('tk-score').textContent = '0';
+    resetTimer();
+    nextTypeKomi();
 
-    H('fc-flip').onclick = ()=>{
-      fc.flipped = !fc.flipped;
-      H('fc-komi').style.opacity = fc.flipped ? '1' : '.25';
-      H('fc-komi').textContent = fc.flipped ? (fc.current?.komi || '') : '•••';
-      H('fc-flip').textContent = fc.flipped ? 'Hide Komi' : 'Show Komi';
+    H('tk-next').onclick = ()=>{ nextTypeKomi(); };
+    H('tk-reveal').onclick = ()=>{
+      if(!tk.current) return;
+      H('tk-hint').textContent = 'Answer: ' + tk.current.komi;
+      H('tk-hint').classList.add('pop'); setTimeout(()=>H('tk-hint').classList.remove('pop'), 250);
     };
-    H('fc-next').onclick = ()=> nextFlashcard();
+    H('tk-check').onclick = ()=> checkTypeKomi();
+    H('tk-input').addEventListener('keydown', (e)=>{
+      if(e.key==='Enter') checkTypeKomi();
+    });
   }
-  function nextFlashcard(){
-    fc.current = randItem(GAME_POOL);
-    H('fc-en').textContent = fc.current.en;
-    fc.flipped = false;
-    H('fc-komi').style.opacity = '.25';
-    H('fc-komi').textContent = '•••';
-    H('fc-flip').textContent = 'Show Komi';
+  function resetTimer(){
+    tk.time = 30;
+    H('tk-time').textContent = String(tk.time);
+    if(tk.timer) clearInterval(tk.timer);
+    tk.timer = setInterval(()=>{
+      tk.time -= 1;
+      H('tk-time').textContent = String(Math.max(0, tk.time));
+      if(tk.time <= 0){
+        clearInterval(tk.timer);
+        tk.timer = null;
+        tk.locked = true;
+        H('tk-hint').textContent = 'Time! Press Next.';
+        H('tk-hint').classList.add('shake'); setTimeout(()=>H('tk-hint').classList.remove('shake'), 300);
+      }
+    }, 1000);
+  }
+  function nextTypeKomi(){
+    tk.locked = false;
+    H('tk-hint').textContent = 'Type fast to build streak. Confetti on correct ✅';
+    H('tk-input').value = '';
+    H('tk-input').focus();
+    tk.current = randItem(GAME_POOL);
+    H('tk-en').textContent = tk.current.en;
+    H('tk-en').classList.add('pop'); setTimeout(()=>H('tk-en').classList.remove('pop'), 250);
+    resetTimer();
+  }
+  function normalizeKomiLite(s){
+    return String(s||'')
+      .toLowerCase()
+      .replace(/ё/g,'е').replace(/ӧ/g,'о')
+      .replace(/[’'`]/g,'')
+      .replace(/\s+/g,' ')
+      .trim();
+  }
+  function checkTypeKomi(){
+    if(tk.locked) return;
+    if(!tk.current) return;
+
+    const guess = normalizeKomiLite(H('tk-input').value);
+    const ans   = normalizeKomiLite(tk.current.komi);
+
+    if(!guess){
+      H('tk-hint').textContent = 'Type something first 🙂';
+      H('tk-hint').classList.add('shake'); setTimeout(()=>H('tk-hint').classList.remove('shake'), 300);
+      return;
+    }
+
+    if(guess === ans){
+      tk.score += 1;
+      H('tk-score').textContent = String(tk.score);
+      updateBest(tk.score);
+      bumpStreak();
+      confettiBurst();
+      H('tk-hint').textContent = 'Correct ✅  Press Next!';
+      H('tk-hint').classList.add('pop'); setTimeout(()=>H('tk-hint').classList.remove('pop'), 250);
+      tk.locked = true;
+      if(tk.timer) { clearInterval(tk.timer); tk.timer=null; }
+    } else {
+      H('tk-hint').textContent = 'Not quite ❌  Try again or press Reveal.';
+      const panel = H('tk-hint');
+      panel.classList.add('shake'); setTimeout(()=>panel.classList.remove('shake'), 300);
+    }
   }
 
   // Game 2: Listen & Pick (only these words)
@@ -412,7 +509,7 @@
   function initListenPick(){
     H('lp-play').disabled = false;
     H('lp-next').disabled = false;
-    H('lp-status').textContent = 'Step 1: click Play Komi. Step 2: choose the meaning.';
+    H('lp-status').textContent = 'Click Play Komi, then choose:';
 
     lp.correct = 0;
     H('lp-correct').textContent = '0';
@@ -464,10 +561,95 @@
       updateBest(lp.correct);
       bumpStreak();
       H('lp-status').textContent = 'Correct ✅  (press New round)';
+      H('lp-status').classList.add('pop'); setTimeout(()=>H('lp-status').classList.remove('pop'), 250);
       confettiBurst();
     } else {
       H('lp-status').textContent = 'Wrong ❌  (press New round)';
+      H('lp-status').classList.add('shake'); setTimeout(()=>H('lp-status').classList.remove('shake'), 300);
     }
+  }
+
+  // -------------------------
+  // BONUS: Offline Mentor (simple rule-based + voice)
+  // -------------------------
+  const chat = H('chat');
+  let voiceOn = true;
+  function addMsg(who, text){
+    const d = document.createElement('div');
+    d.className = 'msg ' + (who==='You' ? 'me' : 'bot');
+    d.innerHTML = `<div class="who">${who}</div><div>${escapeHtml(text)}</div>`;
+    chat.appendChild(d);
+    chat.scrollTop = chat.scrollHeight;
+    d.classList.add('fadein');
+  }
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  }
+  function mentorReply(userText){
+    const t = norm(userText);
+
+    // quick intents
+    if(!t) return "Type something 🙂 Try: hello, how to say dog, give me a phrase.";
+
+    if(t.includes('hello')) return `Try: "Hello" → Komi: "${toKomi('Hello')}".`;
+    if(t.includes('good day')) return `Try: "Good day" → Komi: "${toKomi('Good day')}".`;
+    if(t.includes('dog')) return `Dog → Komi: "${toKomi('Dog')}".`;
+    if(t.includes('cat')) return `Cat → Komi: "${toKomi('Cat')}".`;
+    if(t.includes('fish')) return `Fish → Komi: "${toKomi('Fish')}".`;
+    if(t.includes('river')) return `River → Komi: "${toKomi('River')}".`;
+    if(t.includes('forest')) return `Forest → Komi: "${toKomi('Forest')}".`;
+    if(t.includes('i love you') || (t.includes('love') && t.includes('you'))) return `"I love you" → Komi: "${toKomi('I love you')}".`;
+
+    if(t.includes('phrase') || t.includes('give me')){
+      const pick = randItem(START_WORDS);
+      return `Try this: "${pick}" → Komi: "${toKomi(pick)}".`;
+    }
+
+    if(t.includes('how to say') || t.startsWith('say ')){
+      // naive extraction
+      const q = t.replace('how to say','').replace('say','').trim();
+      if(!q) return 'Tell me the word 🙂 Example: "how to say dog"';
+      // best effort: Title-case first letter
+      const english = q.split(' ').map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(' ');
+      return `"${english}" → Komi: "${toKomi(english)}".`;
+    }
+
+    return `Try these: Hello, Good day, Dog, Cat, Fish. Or type: "how to say river".`;
+  }
+  function speak(text){
+    if(!voiceOn) return;
+    try{
+      const u=new SpeechSynthesisUtterance(text);
+      u.lang='ru-RU'; u.rate=1.0;
+      const pick = speechSynthesis.getVoices().find(v=>/ru/i.test(v.lang)) || null;
+      if(pick) u.voice=pick;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    }catch(_){}
+  }
+  function initMentor(){
+    H('chat-in').disabled = false;
+    H('chat-send').disabled = false;
+    H('chat-voice').disabled = false;
+
+    addMsg('Mentor', 'Hi! I am an offline helper. Try: "hello", "how to say dog", "give me a phrase".');
+
+    H('chat-voice').textContent = 'Voice: ON';
+    H('chat-voice').onclick = ()=>{
+      voiceOn = !voiceOn;
+      H('chat-voice').textContent = voiceOn ? 'Voice: ON' : 'Voice: OFF';
+    };
+
+    function send(){
+      const v = (H('chat-in').value||'').trim();
+      if(!v) return;
+      H('chat-in').value = '';
+      addMsg('You', v);
+      const r = mentorReply(v);
+      addMsg('Mentor', r);
+      speak(r);
+    }
+    H('chat-send').onclick = send;
+    H('chat-in').addEventListener('keydown', (e)=>{ if(e.key==='Enter') send(); });
   }
 
   // -------------------------
@@ -488,15 +670,15 @@
     if (!ctx) return;
     C.style.display = 'block';
 
-    const N = 140;
+    const N = 160;
     const parts = Array.from({length:N}, ()=>({
       x: Math.random()*C.width,
       y: -20 - Math.random()*200,
-      vx: (Math.random()-0.5)*6,
-      vy: 2 + Math.random()*6,
-      r: 2 + Math.random()*4,
+      vx: (Math.random()-0.5)*7,
+      vy: 2 + Math.random()*7,
+      r: 2 + Math.random()*5,
       a: Math.random()*Math.PI*2,
-      va: (Math.random()-0.5)*0.3
+      va: (Math.random()-0.5)*0.35
     }));
 
     const start = performance.now();
@@ -516,8 +698,8 @@
         ctx.save();
         ctx.translate(p.x,p.y);
         ctx.rotate(p.a);
-        ctx.fillStyle = `hsl(${hue},85%,55%)`;
-        ctx.fillRect(-p.r, -p.r, p.r*2.2, p.r*1.6);
+        ctx.fillStyle = `hsl(${hue},90%,55%)`;
+        ctx.fillRect(-p.r, -p.r, p.r*2.3, p.r*1.7);
         ctx.restore();
       });
 
@@ -561,16 +743,18 @@
       // games pool only from our known words
       GAME_POOL = buildGamePool();
       initStats();
-      initFlashcards();
+      initTypeKomi();
       initListenPick();
 
-      H('fc-en').textContent = 'Click Next card to start';
+      // mentor
+      initMentor();
     }catch(e){
       console.error(e);
       H('as-say').disabled = true;
       H('as-record').disabled = true;
-      H('fc-en').textContent = 'Load error';
+      H('tk-en').textContent = 'Load error';
       H('lp-status').textContent = 'Load error';
+      addMsg('Mentor','Load error — open console.');
     }
   }
 
@@ -578,5 +762,6 @@
 </script>
 </body>
 </html>
+
 
 

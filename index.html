@@ -49,11 +49,11 @@
     }
     .ex-chip:hover{transform:translateY(-1px)}
 
-    /* Games */
+    /* Game */
     .section{margin-top:18px}
     .section-title{display:flex;align-items:center;gap:10px;margin:0 0 10px 2px;flex-wrap:wrap}
     .section-title h2{margin:0;font-size:18px;font-weight:900}
-    .pill{display:inline-flex;align-items:center;gap:6px;padding:.25rem .65rem;border-radius:999px;background:#f3f8ff;border:1px solid var(--border);font-weight:900;font-size:13px;color:#194b7c}
+
     .panel{border:1px solid var(--border);border-radius:18px;padding:16px;background:#fff}
     .panel h3{margin:0 0 8px 0;font-size:18px;font-weight:900}
     .mini{font-size:14px;color:var(--muted);margin:0 0 12px 0}
@@ -115,24 +115,22 @@
     <div id="out" class="out"></div>
   </div>
 
-  <!-- Games -->
+  <!-- Game -->
   <div class="section">
     <div class="section-title">
-      <h2>Games</h2>
-      <span class="pill">Streak: <span id="streak">0</span></span>
-      <span class="pill">Best: <span id="best">0</span></span>
+      <h2>Game</h2>
     </div>
 
     <div class="panel">
-      <h3>Emoji + Listen + Pick</h3>
-      <div class="mini">Click Play Komi and choose the meaning in English.</div>
+      <h3 id="game-title"></h3>
+      <div class="mini" id="game-sub"></div>
 
       <div class="quiz-top">
         <div class="emoji-box" id="quiz-emoji">⏳</div>
         <div class="quiz-actions">
           <button class="btn primary" id="quiz-play" disabled>Play Komi</button>
           <button class="btn" id="quiz-next" disabled>Next</button>
-          <span class="pill">Correct: <span id="quiz-correct">0</span></span>
+          <span class="badge hidden" id="quiz-result"></span>
         </div>
       </div>
 
@@ -232,8 +230,7 @@
     u.lang='ru-RU'; u.rate=0.95;
     const pick = speechSynthesis.getVoices().find(v=>/ru/i.test(v.lang)) || null;
     if(pick) u.voice=pick;
-    speechSynthesis.cancel();
-    speechSynthesis.speak(u);
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
   }
   function normForASR(s){
     return String(s||'')
@@ -312,19 +309,25 @@
   });
 
   // -------------------------
-  // GAME: Emoji + Listen + Pick (merged)
+  // GAME: Emoji + Listen + Pick
+  // (Title/subtitle removed from UI)
   // -------------------------
-  // Updated emojis: clearer Good morning / Good day, and River more obvious
+  H('game-title').textContent = '';
+  H('game-sub').textContent = '';
+  const quizResult = H('quiz-result');
+  const hideQuizResult = ()=>{ quizResult.classList.add('hidden'); quizResult.textContent=''; };
+  const showQuizResult = (t)=>{ quizResult.textContent=t; quizResult.classList.remove('hidden'); };
+
   const EMOJI = {
-    "Good morning":"🌅☕",
+    "Good morning":"🌅",
     "Hello":"👋",
-    "Good day":"☀️🌿",
+    "Good day":"☀️",
     "Komi man":"👨",
     "Komi woman":"👩",
     "Child":"🧒",
     "Forest":"🌲",
     "Fish":"🐟",
-    "River":"🌊🏞️",
+    "River":"🌊",
     "Rain":"🌧️",
     "Dog":"🐶",
     "Cat":"🐱",
@@ -343,35 +346,6 @@
     return out;
   }
 
-  // Stats
-  function initStats(){
-    const streak = Number(localStorage.getItem('komi_streak')||'0')||0;
-    const best   = Number(localStorage.getItem('komi_best')||'0')||0;
-    H('streak').textContent = String(streak);
-    H('best').textContent   = String(best);
-  }
-  function todayKey(){
-    const d = new Date();
-    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-  }
-  function bumpStreak(){
-    const last = localStorage.getItem('komi_last_day') || '';
-    const t = todayKey();
-    if (last !== t){
-      const cur = Number(localStorage.getItem('komi_streak')||'0')||0;
-      localStorage.setItem('komi_streak', String(cur+1));
-      localStorage.setItem('komi_last_day', t);
-      H('streak').textContent = String(cur+1);
-    }
-  }
-  function updateBest(v){
-    const best = Number(localStorage.getItem('komi_best')||'0')||0;
-    if (v > best){
-      localStorage.setItem('komi_best', String(v));
-      H('best').textContent = String(v);
-    }
-  }
-
   function shuffle(a){
     const arr = a.slice();
     for(let i=arr.length-1;i>0;i--){
@@ -382,13 +356,11 @@
   }
   function randItem(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-  let quiz = { current:null, choices:[], locked:false, correct:0 };
+  let quiz = { current:null, choices:[], locked:false };
 
   function initQuiz(){
     H('quiz-play').disabled = false;
     H('quiz-next').disabled = false;
-    H('quiz-correct').textContent = '0';
-    quiz.correct = 0;
     newQuizRound();
 
     H('quiz-play').onclick = ()=>{
@@ -400,8 +372,9 @@
 
   function newQuizRound(){
     quiz.locked = false;
-    quiz.current = randItem(GAME_POOL);
+    hideQuizResult();
 
+    quiz.current = randItem(GAME_POOL);
     H('quiz-emoji').textContent = quiz.current.emoji;
 
     const distract = shuffle(GAME_POOL.filter(x=>x.en!==quiz.current.en)).slice(0,3);
@@ -436,11 +409,10 @@
     });
 
     if (en === correctEn){
-      quiz.correct += 1;
-      H('quiz-correct').textContent = String(quiz.correct);
-      updateBest(quiz.correct);
-      bumpStreak();
+      showQuizResult('OK');
       confettiBurst();
+    } else {
+      showQuizResult('Try again');
     }
   }
 
@@ -535,7 +507,6 @@
 
       // init game
       GAME_POOL = buildGamePool();
-      initStats();
       initQuiz();
 
       if (!GAME_POOL.length) H('quiz-emoji').textContent = "⚠️";
@@ -553,6 +524,7 @@
 </script>
 </body>
 </html>
+
 
 
 

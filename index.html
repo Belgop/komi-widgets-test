@@ -232,7 +232,8 @@
     u.lang='ru-RU'; u.rate=0.95;
     const pick = speechSynthesis.getVoices().find(v=>/ru/i.test(v.lang)) || null;
     if(pick) u.voice=pick;
-    speechSynthesis.cancel(); speechSynthesis.speak(u);
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
   }
   function normForASR(s){
     return String(s||'')
@@ -313,17 +314,17 @@
   // -------------------------
   // GAME: Emoji + Listen + Pick (merged)
   // -------------------------
-  // Emoji set (simple, clear)
+  // Updated emojis: clearer Good morning / Good day, and River more obvious
   const EMOJI = {
-    "Good morning":"🌅",
+    "Good morning":"🌅☕",
     "Hello":"👋",
-    "Good day":"☀️",
+    "Good day":"☀️🌿",
     "Komi man":"👨",
     "Komi woman":"👩",
     "Child":"🧒",
     "Forest":"🌲",
     "Fish":"🐟",
-    "River":"🏞️",
+    "River":"🌊🏞️",
     "Rain":"🌧️",
     "Dog":"🐶",
     "Cat":"🐱",
@@ -537,7 +538,6 @@
       initStats();
       initQuiz();
 
-      // set initial emoji (in case)
       if (!GAME_POOL.length) H('quiz-emoji').textContent = "⚠️";
     }catch(e){
       console.error(e);
@@ -553,7 +553,6 @@
 </script>
 </body>
 </html>
-
 
 
 

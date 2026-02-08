@@ -31,7 +31,7 @@
     .btn:disabled{opacity:.55;cursor:not-allowed}
     .txt{width:100%;padding:1rem;border-radius:14px;border:1px solid var(--border);font-size:18px}
     .out{min-height:70px;margin-top:12px;padding:14px;border-radius:14px;border:1px solid var(--border);background:#fff;font-size:20px}
-    .badge{display:inline-block;padding:.25rem .65rem;border-radius:999px;background:#eef6ff;border:1px solid #d9e8f7;color:#194b7c;font-weight:800}
+    .badge{display:inline-block;padding:.25rem .65rem;border-radius:999px;background:#eef6ff;border:1px solid #d9e8f7;color:#194b7c;font-weight:900}
     .hidden{display:none}
     .meter{height:12px;background:#eef6ff;border:1px solid var(--border);border-radius:999px;overflow:hidden;margin-top:8px}
     .bar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .35s ease}
@@ -49,9 +49,9 @@
     }
     .ex-chip:hover{transform:translateY(-1px)}
 
-    /* Games UI */
+    /* Games */
     .section{margin-top:18px}
-    .section-title{display:flex;align-items:center;gap:10px;margin:0 0 10px 2px}
+    .section-title{display:flex;align-items:center;gap:10px;margin:0 0 10px 2px;flex-wrap:wrap}
     .section-title h2{margin:0;font-size:18px;font-weight:900}
     .pill{display:inline-flex;align-items:center;gap:6px;padding:.25rem .65rem;border-radius:999px;background:#f3f8ff;border:1px solid var(--border);font-weight:900;font-size:13px;color:#194b7c}
     .games-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -59,15 +59,15 @@
     .panel{border:1px solid var(--border);border-radius:18px;padding:16px;background:#fff}
     .panel h3{margin:0 0 6px 0;font-size:18px;font-weight:900}
     .mini{font-size:14px;color:var(--muted);margin:6px 0 12px 0}
+    .big{font-size:22px;font-weight:950;letter-spacing:.2px}
+    .cardface{border:1px dashed #c7d5e6;background:#f3f8ff;border-radius:16px;padding:14px}
+    .divider{height:1px;background:var(--border);margin:12px 0}
     .choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     @media (max-width: 520px){ .choice-grid{grid-template-columns:1fr} }
     .choice{width:100%;text-align:left}
     .choice.correct{border-color:#16a34a}
     .choice.wrong{border-color:#ef4444}
-    .cardface{border:1px dashed #c7d5e6;background:#f3f8ff;border-radius:16px;padding:14px}
-    .kkey{font-size:20px;font-weight:900}
-    .kval{font-size:22px;font-weight:900;margin-top:10px}
-    .divider{height:1px;background:var(--border);margin:12px 0}
+    .hintline{font-size:14px;color:var(--muted);margin-top:8px}
 
     /* confetti */
     #confettiCanvas{position:fixed;inset:0;pointer-events:none;z-index:9999;display:none}
@@ -79,7 +79,6 @@
 <div class="wrap">
   <h1 class="brand">Komi widgets <span class="v">Translator & Assistant</span></h1>
 
-  <!-- Tabs only for Assistant/Translator -->
   <div class="tabs">
     <button class="tab-btn active" data-tab="as">Assistant</button>
     <button class="tab-btn" data-tab="tr">Translator</button>
@@ -88,7 +87,6 @@
   <!-- Assistant -->
   <div id="tab-as" class="card">
     <div class="title">Assistant (Speak Komi)</div>
-
     <div class="examples" id="examples-as"></div>
 
     <input id="as-text" class="txt" placeholder="Type here…" />
@@ -103,7 +101,6 @@
   <!-- Translator -->
   <div id="tab-tr" class="card hidden">
     <div class="title">English to Komi Translator</div>
-
     <div class="examples" id="examples-tr"></div>
 
     <textarea id="src" class="txt" rows="4" placeholder="Type here…"></textarea>
@@ -113,50 +110,52 @@
     <div id="out" class="out"></div>
   </div>
 
-  <!-- Games ALWAYS below -->
+  <!-- Games -->
   <div class="section">
     <div class="section-title">
-      <h2>Games</h2>
+      <h2>Games (easy)</h2>
       <span class="pill">Streak: <span id="streak">0</span></span>
       <span class="pill">Best: <span id="best">0</span></span>
     </div>
 
     <div class="games-grid">
-      <!-- Flashcards -->
+      <!-- Game 1: Flashcards -->
       <div class="panel">
-        <h3>Flashcards</h3>
-        <div class="mini">Flip the card. Mark if you knew it.</div>
+        <h3>Game 1 — Flashcards</h3>
+        <div class="mini">Click <b>Show Komi</b> to reveal the Komi word.</div>
 
-        <div class="cardface" id="fc-face">
-          <div class="kkey" id="fc-en">Loading…</div>
+        <div class="cardface">
+          <div class="mini">English</div>
+          <div class="big" id="fc-en">Loading…</div>
           <div class="divider"></div>
-          <div class="kval" id="fc-komi" style="opacity:.2">•••</div>
+          <div class="mini">Komi</div>
+          <div class="big" id="fc-komi" style="opacity:.25">•••</div>
         </div>
 
         <div class="row" style="margin-top:12px">
           <button class="btn" id="fc-flip" disabled>Show Komi</button>
-          <button class="btn" id="fc-next" disabled>Next</button>
-        </div>
-        <div class="row" style="margin-top:10px">
-          <button class="btn" id="fc-knew" disabled>I knew</button>
-          <button class="btn" id="fc-nope" disabled>I didn’t</button>
+          <button class="btn" id="fc-next" disabled>Next card</button>
           <span class="pill">Score: <span id="fc-score">0</span></span>
         </div>
+
+        <div class="hintline">Tip: Use these words to start — <b>Hello, Good day, Dog, Cat, Fish</b>.</div>
       </div>
 
-      <!-- Listen & Pick -->
+      <!-- Game 2: Listen & Pick -->
       <div class="panel">
-        <h3>Listen & Pick</h3>
-        <div class="mini">Listen to Komi and pick the correct English.</div>
+        <h3>Game 2 — Listen & Pick</h3>
+        <div class="mini">Click <b>Play Komi</b> and choose what it means in English.</div>
 
-        <div class="row">
+        <div class="row" style="margin-bottom:10px">
           <button class="btn primary" id="lp-play" disabled>Play Komi</button>
-          <button class="btn" id="lp-next" disabled>Next</button>
+          <button class="btn" id="lp-next" disabled>New round</button>
           <span class="pill">Correct: <span id="lp-correct">0</span></span>
         </div>
 
         <div class="mini" id="lp-status">Loading…</div>
         <div class="choice-grid" id="lp-choices"></div>
+
+        <div class="hintline">If you get it right — confetti 🎉</div>
       </div>
     </div>
   </div>
@@ -196,14 +195,14 @@
 
   let DICT=null;
 
-  // Assistant: show only score (after recording)
+  // Assistant: score only
   const statusEl = H('as-status');
   const setScore = v=> H('as-bar').style.width = Math.max(0, Math.min(100, v)) + '%';
   const hideStatus = ()=>{ statusEl.classList.add('hidden'); statusEl.textContent=''; };
   const showScore  = (s)=>{ statusEl.textContent = 'Score: ' + s + ' / 100'; statusEl.classList.remove('hidden'); };
 
-  // Examples chips
-  const EXAMPLES = [
+  // Words we use everywhere (simple & clear)
+  const START_WORDS = [
     "Good morning",
     "Hello",
     "Good day",
@@ -218,13 +217,14 @@
     "Cat",
     "I love you"
   ];
+
   function renderExamples(containerId, inputId){
     const box = document.getElementById(containerId);
     if(!box) return;
 
     box.innerHTML =
       `<span class="label">TRY THESE WORDS:</span>` +
-      EXAMPLES.map(t =>
+      START_WORDS.map(t =>
         `<button type="button" class="ex-chip" data-fill="${t.replace(/"/g,'&quot;')}">${t}</button>`
       ).join("");
 
@@ -242,7 +242,7 @@
   renderExamples("examples-tr", "src");
   renderExamples("examples-as", "as-text");
 
-  // Core speech + scoring
+  // Speech + scoring
   function toKomi(text){
     const {out} = mapLongest(toks(text), DICT||{}, 4);
     return finalize(out);
@@ -305,8 +305,7 @@
     const en=(H('as-text').value||'').trim();
     if(!en) return;
     hideStatus();
-    const kom = toKomi(en);
-    speakKomi(kom);
+    speakKomi(toKomi(en));
   });
   H('as-record').addEventListener('click', ()=>{
     const en=(H('as-text').value||'').trim();
@@ -328,152 +327,28 @@
       showScore(s);
       if (s >= 85) confettiBurst();
     };
-    rec.onerror =()=>{};
-    rec.onend   =()=>{};
     rec.start();
   });
 
   // -------------------------
-  // GAMES
+  // GAMES (use ONLY our known words)
   // -------------------------
-  let POOL = []; // [{en, komi}]
-  function initGamesPool(){
-    const raw = [];
-    for (const [k,v] of Object.entries(DICT||{})){
-      if (typeof k !== 'string') continue;
-      if (typeof v !== 'string') continue;
-      const en = k.trim();
-      const komi = String(v).trim();
-      if (!en || !komi) continue;
-      if (en.length > 35) continue;
-      if (en.split(' ').length > 3) continue;
-      raw.push({en, komi});
+  let GAME_POOL = []; // [{en, komi}]
+  function buildGamePool(){
+    const out = [];
+    for (const en of START_WORDS){
+      const komi = toKomi(en);
+      if (komi && komi.trim()) out.push({en, komi});
     }
-    POOL = raw;
+    return out;
+  }
 
+  function initStats(){
     const streak = Number(localStorage.getItem('komi_streak')||'0')||0;
     const best   = Number(localStorage.getItem('komi_best')||'0')||0;
     H('streak').textContent = String(streak);
     H('best').textContent   = String(best);
   }
-
-  // Flashcards
-  let fc = { flipped:false, score:0 };
-  function pickRandomFromPool(){
-    if (!POOL.length) return {en:'(no data)', komi:''};
-    return POOL[Math.floor(Math.random()*POOL.length)];
-  }
-  function initFlashcards(){
-    H('fc-flip').disabled = false;
-    H('fc-next').disabled = false;
-    H('fc-knew').disabled = false;
-    H('fc-nope').disabled = false;
-
-    fc.score = 0;
-    H('fc-score').textContent = '0';
-    nextFlashcard(true);
-
-    H('fc-flip').onclick = ()=>{
-      fc.flipped = !fc.flipped;
-      H('fc-komi').style.opacity = fc.flipped ? '1' : '.2';
-      H('fc-komi').textContent = fc.flipped ? H('fc-komi').dataset.komi : '•••';
-      H('fc-flip').textContent = fc.flipped ? 'Hide Komi' : 'Show Komi';
-    };
-    H('fc-next').onclick = ()=> nextFlashcard(false);
-    H('fc-knew').onclick = ()=>{
-      fc.score += 1;
-      H('fc-score').textContent = String(fc.score);
-      updateBest(fc.score);
-      bumpStreak();
-      nextFlashcard(false);
-    };
-    H('fc-nope').onclick = ()=> nextFlashcard(false);
-  }
-  function nextFlashcard(){
-    const item = pickRandomFromPool();
-    H('fc-en').textContent = item.en;
-    H('fc-komi').dataset.komi = item.komi;
-    fc.flipped = false;
-    H('fc-komi').style.opacity = '.2';
-    H('fc-komi').textContent = '•••';
-    H('fc-flip').textContent = 'Show Komi';
-  }
-
-  // Listen & Pick
-  let lp = { current:null, choices:[], locked:false, correct:0 };
-  function shuffle(a){
-    const arr = a.slice();
-    for(let i=arr.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [arr[i],arr[j]] = [arr[j],arr[i]];
-    }
-    return arr;
-  }
-  function initListenPick(){
-    H('lp-play').disabled = false;
-    H('lp-next').disabled = false;
-    H('lp-status').textContent = 'Click “Play Komi” then choose.';
-    nextListenPick(true);
-
-    H('lp-play').onclick = ()=>{
-      if (!lp.current) return;
-      speakKomi(lp.current.komi);
-    };
-    H('lp-next').onclick = ()=> nextListenPick(false);
-  }
-  function nextListenPick(first){
-    if (!POOL.length){
-      H('lp-status').textContent = 'No dictionary data.';
-      H('lp-choices').innerHTML = '';
-      return;
-    }
-    lp.locked = false;
-    const correct = pickRandomFromPool();
-    const distractors = shuffle(POOL.filter(x=>x.en!==correct.en)).slice(0,3);
-    const choices = shuffle([correct, ...distractors]).map(x=>x.en);
-
-    lp.current = correct;
-    lp.choices = choices;
-
-    H('lp-status').textContent = first ? 'Click “Play Komi” then choose.' : 'New round — click “Play Komi”.';
-    renderChoices();
-  }
-  function renderChoices(){
-    const box = H('lp-choices');
-    box.innerHTML = '';
-    lp.choices.forEach(en=>{
-      const b = document.createElement('button');
-      b.className = 'btn choice';
-      b.type = 'button';
-      b.textContent = en;
-      b.onclick = ()=> handleChoice(b, en);
-      box.appendChild(b);
-    });
-  }
-  function handleChoice(_, en){
-    if (lp.locked) return;
-    lp.locked = true;
-    const correctEn = lp.current.en;
-
-    [...H('lp-choices').querySelectorAll('button')].forEach(b=>{
-      if (b.textContent === correctEn) b.classList.add('correct');
-      else if (b.textContent === en) b.classList.add('wrong');
-      b.disabled = true;
-    });
-
-    if (en === correctEn){
-      lp.correct += 1;
-      H('lp-correct').textContent = String(lp.correct);
-      updateBest(lp.correct);
-      bumpStreak();
-      H('lp-status').textContent = 'Correct ✅';
-      confettiBurst();
-    } else {
-      H('lp-status').textContent = 'Wrong ❌';
-    }
-  }
-
-  // Streak/Best
   function todayKey(){
     const d = new Date();
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
@@ -495,9 +370,108 @@
       H('best').textContent = String(v);
     }
   }
+  function randItem(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+  function shuffle(a){
+    const arr = a.slice();
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  // Game 1: Flashcards (super simple)
+  let fc = { flipped:false, score:0, current:null };
+  function initFlashcards(){
+    H('fc-flip').disabled = false;
+    H('fc-next').disabled = false;
+
+    fc.score = 0;
+    H('fc-score').textContent = '0';
+    nextFlashcard();
+
+    H('fc-flip').onclick = ()=>{
+      fc.flipped = !fc.flipped;
+      H('fc-komi').style.opacity = fc.flipped ? '1' : '.25';
+      H('fc-komi').textContent = fc.flipped ? (fc.current?.komi || '') : '•••';
+      H('fc-flip').textContent = fc.flipped ? 'Hide Komi' : 'Show Komi';
+    };
+    H('fc-next').onclick = ()=> nextFlashcard();
+  }
+  function nextFlashcard(){
+    fc.current = randItem(GAME_POOL);
+    H('fc-en').textContent = fc.current.en;
+    fc.flipped = false;
+    H('fc-komi').style.opacity = '.25';
+    H('fc-komi').textContent = '•••';
+    H('fc-flip').textContent = 'Show Komi';
+  }
+
+  // Game 2: Listen & Pick (only these words)
+  let lp = { current:null, choices:[], locked:false, correct:0 };
+  function initListenPick(){
+    H('lp-play').disabled = false;
+    H('lp-next').disabled = false;
+    H('lp-status').textContent = 'Step 1: click Play Komi. Step 2: choose the meaning.';
+
+    lp.correct = 0;
+    H('lp-correct').textContent = '0';
+    newRound();
+
+    H('lp-play').onclick = ()=>{
+      if (!lp.current) return;
+      speakKomi(lp.current.komi);
+    };
+    H('lp-next').onclick = ()=> newRound();
+  }
+  function newRound(){
+    lp.locked = false;
+    lp.current = randItem(GAME_POOL);
+
+    const distract = shuffle(GAME_POOL.filter(x=>x.en!==lp.current.en)).slice(0,3);
+    lp.choices = shuffle([lp.current, ...distract]).map(x=>x.en);
+
+    H('lp-status').textContent = 'Click Play Komi, then choose:';
+    renderChoices();
+  }
+  function renderChoices(){
+    const box = H('lp-choices');
+    box.innerHTML = '';
+    lp.choices.forEach(en=>{
+      const b = document.createElement('button');
+      b.className = 'btn choice';
+      b.type = 'button';
+      b.textContent = en;
+      b.onclick = ()=> handleChoice(en);
+      box.appendChild(b);
+    });
+  }
+  function handleChoice(en){
+    if (lp.locked) return;
+    lp.locked = true;
+
+    const correctEn = lp.current.en;
+    const buttons = [...H('lp-choices').querySelectorAll('button')];
+    buttons.forEach(b=>{
+      if (b.textContent === correctEn) b.classList.add('correct');
+      else if (b.textContent === en) b.classList.add('wrong');
+      b.disabled = true;
+    });
+
+    if (en === correctEn){
+      lp.correct += 1;
+      H('lp-correct').textContent = String(lp.correct);
+      updateBest(lp.correct);
+      bumpStreak();
+      H('lp-status').textContent = 'Correct ✅  (press New round)';
+      confettiBurst();
+    } else {
+      H('lp-status').textContent = 'Wrong ❌  (press New round)';
+    }
+  }
 
   // -------------------------
-  // CONFETTI (no libs)
+  // CONFETTI (keep)
   // -------------------------
   const C = H('confettiCanvas');
   const ctx = C.getContext('2d');
@@ -559,7 +533,7 @@
     confettiTimer = requestAnimationFrame(frame);
   }
 
-  // Load dictionary + init everything
+  // Load dictionary
   async function loadAll(){
     const bust = 'v=' + Date.now();
     try{
@@ -581,18 +555,16 @@
       DICT = dict;
       if (window.MiniLM && typeof window.MiniLM.init === 'function') window.MiniLM.init(DICT);
 
-      // enable Assistant
       H('as-say').disabled = false;
       H('as-record').disabled = false;
 
-      // enable games
-      initGamesPool();
+      // games pool only from our known words
+      GAME_POOL = buildGamePool();
+      initStats();
       initFlashcards();
       initListenPick();
 
-      // replace loading label on cards if needed
-      H('fc-en').textContent = 'Click Next to start';
-      H('lp-status').textContent = 'Click “Play Komi” then choose.';
+      H('fc-en').textContent = 'Click Next card to start';
     }catch(e){
       console.error(e);
       H('as-say').disabled = true;

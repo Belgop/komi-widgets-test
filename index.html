@@ -59,13 +59,11 @@
 <div class="wrap">
   <h1 class="brand">Komi widgets <span class="v">Translator & Assistant</span></h1>
 
-  <!-- Assistant first -->
   <div class="tabs">
     <button class="tab-btn active" data-tab="as">Assistant</button>
     <button class="tab-btn" data-tab="tr">Translator</button>
   </div>
 
-  <!-- Assistant (visible by default) -->
   <div id="tab-as" class="card">
     <div class="title">Assistant (Speak Komi)</div>
     <div class="sub">We translate your English phrase to Komi, play it, then you repeat — and get a score.</div>
@@ -86,7 +84,6 @@
     <div class="hint" id="as-hint"></div>
   </div>
 
-  <!-- Translator (hidden by default) -->
   <div id="tab-tr" class="card hidden">
     <div class="title">English to Komi Translator</div>
     <div class="sub">Type a short English phrase. We’ll translate using a dictionary and safe transliteration.</div>
@@ -143,17 +140,14 @@
   const setScore = v=> H('as-bar').style.width = Math.max(0, Math.min(100, v)) + '%';
 
   async function loadAll(){
-    const bust = 'v=' + Date.now(); // cache-bust
+    const bust = 'v=' + Date.now();
     try{
-      // 1) base dict
       const base = await fetch(`./data/dictionary.json?${bust}`,{cache:'no-store'}).then(r=>r.json());
       let dict = {...base};
 
-      // 2) overlays manifest
       const manifest = await fetch(`./data/overlays/overlay_manifest.json?${bust}`,{cache:'no-store'}).then(r=>r.json());
       if(!Array.isArray(manifest)) throw new Error('overlay_manifest.json must be an array of filenames');
 
-      // 3) load overlays
       for (const file of manifest) {
         try{
           const ov = await fetch(`./data/overlays/${file}?${bust}`, {cache:'no-store'}).then(r=>r.json());
@@ -163,13 +157,11 @@
         }
       }
 
-      // 4) save dict + init mini-LM
       DICT = dict;
       if (window.MiniLM && typeof window.MiniLM.init === 'function') {
         window.MiniLM.init(DICT);
       }
 
-      // enable assistant buttons
       H('as-say').disabled = false;
       H('as-record').disabled = false;
       status('Ready — click “Play Komi” or “Record & Check”.');
@@ -194,10 +186,11 @@
   H('do').addEventListener('click', translate);
   H('src').addEventListener('keydown', e => { if(e.key==='Enter' && (e.ctrlKey||e.metaKey)) translate(); });
 
-  /* Clickable examples */
+  /* Clickable examples (Hello and Good day split) */
   const EXAMPLES = [
     "Good morning",
-    "Hello (or good day)",
+    "Hello",
+    "Good day",
     "Komi man",
     "Komi woman",
     "Child",
@@ -277,7 +270,6 @@
     const dEff = Math.max(0, dRaw - forgiveness);
     const base = Math.max(0, Math.min(100, Math.round(100 * (1 - dEff / Math.max(1, target.length)))));
 
-    // mix mini-LM if ready
     let final = base;
     try{
       if (window.MiniLM && window.MiniLM.ready && typeof window.MiniLM.score === 'function'){
@@ -331,4 +323,3 @@
 </script>
 </body>
 </html>
-

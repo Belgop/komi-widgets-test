@@ -28,6 +28,7 @@
     .row{display:flex;gap:.7rem;flex-wrap:wrap;align-items:center}
     .btn{padding:.75rem 1.1rem;border-radius:12px;border:1px solid var(--border);background:#fff;cursor:pointer}
     .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border:none}
+    .btn.big{padding:1rem 1.3rem;font-weight:900;font-size:18px;border-radius:14px}
     .btn:disabled{opacity:.55;cursor:not-allowed}
     .txt{width:100%;padding:1rem;border-radius:14px;border:1px solid var(--border);font-size:18px}
     .out{min-height:70px;margin-top:12px;padding:14px;border-radius:14px;border:1px solid var(--border);background:#fff;font-size:20px}
@@ -55,12 +56,9 @@
     .section-title h2{margin:0;font-size:18px;font-weight:900}
 
     .panel{border:1px solid var(--border);border-radius:18px;padding:16px;background:#fff}
-    .panel h3{margin:0 0 8px 0;font-size:18px;font-weight:900}
-    .mini{font-size:14px;color:var(--muted);margin:0 0 12px 0}
-
     .quiz-top{
       display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-      margin-bottom:10px
+      margin-bottom:12px
     }
     .emoji-box{
       border:1px dashed #c7d5e6;background:#f3f8ff;border-radius:16px;
@@ -74,12 +72,49 @@
     .choice.correct{border-color:#16a34a}
     .choice.wrong{border-color:#ef4444}
 
+    /* popup (emoji “picture”) */
+    .pop{position:fixed;inset:0;display:none;place-items:center;z-index:10000}
+    .pop.show{display:grid}
+    .pop .back{position:absolute;inset:0;background:rgba(11,18,48,.35)}
+    .pop .box{
+      position:relative;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:22px;
+      box-shadow:0 24px 70px rgba(13,38,76,.22);
+      padding:22px 26px;
+      min-width:min(520px,92vw);
+      text-align:center;
+      animation:popIn .22s ease-out;
+    }
+    @keyframes popIn{
+      from{transform:translateY(10px) scale(.96); opacity:.0}
+      to{transform:translateY(0) scale(1); opacity:1}
+    }
+    .pop .pic{
+      font-size:84px;
+      line-height:1;
+      margin:6px 0 10px 0;
+    }
+    .pop .ok{
+      margin-top:12px;
+    }
+
     /* confetti */
     #confettiCanvas{position:fixed;inset:0;pointer-events:none;z-index:9999;display:none}
   </style>
 </head>
 <body>
 <canvas id="confettiCanvas"></canvas>
+
+<!-- popup -->
+<div class="pop" id="pop">
+  <div class="back" id="popBack"></div>
+  <div class="box">
+    <div class="pic" id="popPic">🎉</div>
+    <button class="btn primary ok" id="popOk">OK</button>
+  </div>
+</div>
 
 <div class="wrap">
   <h1 class="brand">Komi widgets <span class="v">Translator & Assistant</span></h1>
@@ -122,19 +157,16 @@
     </div>
 
     <div class="panel">
-      <h3 id="game-title"></h3>
-      <div class="mini" id="game-sub"></div>
-
       <div class="quiz-top">
-        <div class="emoji-box" id="quiz-emoji">⏳</div>
+        <div class="emoji-box" id="quiz-emoji">🎧</div>
         <div class="quiz-actions">
-          <button class="btn primary" id="quiz-play" disabled>Play Komi</button>
+          <button class="btn primary big" id="quiz-listen" disabled>Listen</button>
           <button class="btn" id="quiz-next" disabled>Next</button>
-          <span class="badge hidden" id="quiz-result"></span>
         </div>
       </div>
 
-      <div class="choice-grid" id="quiz-choices"></div>
+      <!-- choices appear AFTER Listen -->
+      <div class="choice-grid hidden" id="quiz-choices"></div>
     </div>
   </div>
 </div>
@@ -179,7 +211,7 @@
   const hideStatus = ()=>{ statusEl.classList.add('hidden'); statusEl.textContent=''; };
   const showScore  = (s)=>{ statusEl.textContent = 'Score: ' + s + ' / 100'; statusEl.classList.remove('hidden'); };
 
-  // Words
+  // Examples for Assistant/Translator (unchanged)
   const START_WORDS = [
     "Good morning",
     "Hello",
@@ -309,42 +341,34 @@
   });
 
   // -------------------------
-  // GAME: Emoji + Listen + Pick
-  // (Title/subtitle removed from UI)
+  // GAME (20 words, emoji-friendly, NO greetings)
+  // Flow:
+  // 1) Big button "Listen"
+  // 2) After listen -> show 4 options in Komi
+  // 3) Correct -> confetti + popup “picture” (emoji)
   // -------------------------
-  H('game-title').textContent = '';
-  H('game-sub').textContent = '';
-  const quizResult = H('quiz-result');
-  const hideQuizResult = ()=>{ quizResult.classList.add('hidden'); quizResult.textContent=''; };
-  const showQuizResult = (t)=>{ quizResult.textContent=t; quizResult.classList.remove('hidden'); };
-
-  const EMOJI = {
-    "Good morning":"🌅",
-    "Hello":"👋",
-    "Good day":"☀️",
-    "Komi man":"👨",
-    "Komi woman":"👩",
-    "Child":"🧒",
-    "Forest":"🌲",
-    "Fish":"🐟",
-    "River":"🌊",
-    "Rain":"🌧️",
-    "Dog":"🐶",
-    "Cat":"🐱",
-    "I love you":"❤️"
-  };
-
-  let GAME_POOL = []; // [{en, komi, emoji}]
-  function buildGamePool(){
-    const out = [];
-    for (const en of START_WORDS){
-      const komi = toKomi(en);
-      if (komi && komi.trim()){
-        out.push({en, komi, emoji: (EMOJI[en] || "✨")});
-      }
-    }
-    return out;
-  }
+  const GAME_WORDS = [
+    {en:"Dog", emoji:"🐶"},
+    {en:"Cat", emoji:"🐱"},
+    {en:"Fish", emoji:"🐟"},
+    {en:"Bird", emoji:"🐦"},
+    {en:"Horse", emoji:"🐴"},
+    {en:"Bear", emoji:"🐻"},
+    {en:"Tree", emoji:"🌳"},
+    {en:"Forest", emoji:"🌲"},
+    {en:"River", emoji:"🌊"},
+    {en:"Rain", emoji:"🌧️"},
+    {en:"Snow", emoji:"❄️"},
+    {en:"Sun", emoji:"☀️"},
+    {en:"Moon", emoji:"🌙"},
+    {en:"Star", emoji:"⭐"},
+    {en:"Fire", emoji:"🔥"},
+    {en:"Water", emoji:"💧"},
+    {en:"House", emoji:"🏠"},
+    {en:"Car", emoji:"🚗"},
+    {en:"Book", emoji:"📘"},
+    {en:"Bread", emoji:"🍞"}
+  ];
 
   function shuffle(a){
     const arr = a.slice();
@@ -356,65 +380,100 @@
   }
   function randItem(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-  let quiz = { current:null, choices:[], locked:false };
+  let POOL = []; // [{en, komi, emoji}]
+  let game = { current:null, choices:[], listened:false, locked:false };
 
-  function initQuiz(){
-    H('quiz-play').disabled = false;
+  function buildPool(){
+    const out = [];
+    for (const w of GAME_WORDS){
+      const komi = toKomi(w.en);
+      if (komi && komi.trim()) out.push({en:w.en, komi, emoji:w.emoji});
+    }
+    return out;
+  }
+
+  function initGame(){
+    H('quiz-listen').disabled = false;
     H('quiz-next').disabled = false;
-    newQuizRound();
+    newRound();
 
-    H('quiz-play').onclick = ()=>{
-      if (!quiz.current) return;
-      speakKomi(quiz.current.komi);
+    H('quiz-listen').onclick = ()=>{
+      if (!game.current) return;
+      // show emoji (picture) first
+      H('quiz-emoji').textContent = game.current.emoji;
+      // play Komi audio
+      speakKomi(game.current.komi);
+      // reveal options
+      game.listened = true;
+      H('quiz-choices').classList.remove('hidden');
+      renderChoices();
     };
-    H('quiz-next').onclick = ()=> newQuizRound();
+
+    H('quiz-next').onclick = ()=> newRound();
   }
 
-  function newQuizRound(){
-    quiz.locked = false;
-    hideQuizResult();
+  function newRound(){
+    game.locked = false;
+    game.listened = false;
+    H('quiz-emoji').textContent = "🎧";
+    H('quiz-choices').classList.add('hidden');
+    H('quiz-choices').innerHTML = "";
 
-    quiz.current = randItem(GAME_POOL);
-    H('quiz-emoji').textContent = quiz.current.emoji;
+    game.current = randItem(POOL);
 
-    const distract = shuffle(GAME_POOL.filter(x=>x.en!==quiz.current.en)).slice(0,3);
-    quiz.choices = shuffle([quiz.current, ...distract]).map(x=>x.en);
+    const distract = shuffle(POOL.filter(x=>x.en!==game.current.en)).slice(0,3);
+    const options = shuffle([game.current, ...distract]);
 
-    renderQuizChoices();
+    // choices are Komi words (text on buttons)
+    game.choices = options.map(x=>x.komi);
+
+    // map komi->isCorrect
+    game.correctKomi = game.current.komi;
   }
 
-  function renderQuizChoices(){
+  function renderChoices(){
     const box = H('quiz-choices');
     box.innerHTML = '';
-    quiz.choices.forEach(en=>{
+    game.choices.forEach(km=>{
       const b = document.createElement('button');
       b.className = 'btn choice';
       b.type = 'button';
-      b.textContent = en;
-      b.onclick = ()=> handleQuizChoice(en);
+      b.textContent = km;
+      b.onclick = ()=> pick(km, b);
       box.appendChild(b);
     });
   }
 
-  function handleQuizChoice(en){
-    if (quiz.locked) return;
-    quiz.locked = true;
+  function pick(km){
+    if (!game.listened || game.locked) return;
+    game.locked = true;
 
-    const correctEn = quiz.current.en;
+    const correct = (km === game.correctKomi);
     const buttons = [...H('quiz-choices').querySelectorAll('button')];
-    buttons.forEach(b=>{
-      if (b.textContent === correctEn) b.classList.add('correct');
-      else if (b.textContent === en) b.classList.add('wrong');
-      b.disabled = true;
+
+    buttons.forEach(btn=>{
+      if (btn.textContent === game.correctKomi) btn.classList.add('correct');
+      else if (btn.textContent === km) btn.classList.add('wrong');
+      btn.disabled = true;
     });
 
-    if (en === correctEn){
-      showQuizResult('OK');
+    if (correct){
       confettiBurst();
-    } else {
-      showQuizResult('Try again');
+      showPopup(game.current.emoji);
     }
   }
+
+  // Popup
+  const pop = H('pop');
+  function showPopup(emoji){
+    H('popPic').textContent = emoji;
+    pop.classList.add('show');
+  }
+  function hidePopup(){
+    pop.classList.remove('show');
+  }
+  H('popOk').addEventListener('click', hidePopup);
+  H('popBack').addEventListener('click', hidePopup);
 
   // -------------------------
   // CONFETTI
@@ -501,22 +560,26 @@
       DICT = dict;
       if (window.MiniLM && typeof window.MiniLM.init === 'function') window.MiniLM.init(DICT);
 
-      // enable buttons
+      // enable assistant buttons
       H('as-say').disabled = false;
       H('as-record').disabled = false;
 
-      // init game
-      GAME_POOL = buildGamePool();
-      initQuiz();
-
-      if (!GAME_POOL.length) H('quiz-emoji').textContent = "⚠️";
+      // game pool + start
+      POOL = buildPool();
+      if (!POOL.length){
+        H('quiz-emoji').textContent = "⚠️";
+        H('quiz-listen').disabled = true;
+        H('quiz-next').disabled = true;
+        return;
+      }
+      initGame();
     }catch(e){
       console.error(e);
       H('as-say').disabled = true;
       H('as-record').disabled = true;
-      H('quiz-play').disabled = true;
-      H('quiz-next').disabled = true;
       H('quiz-emoji').textContent = "⚠️";
+      H('quiz-listen').disabled = true;
+      H('quiz-next').disabled = true;
     }
   }
 

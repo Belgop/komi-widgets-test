@@ -57,15 +57,38 @@
 
     .panel{border:1px solid var(--border);border-radius:18px;padding:16px;background:#fff}
     .quiz-top{
-      display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-      margin-bottom:12px
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap:12px;
+      align-items:center;
+      margin-bottom:12px;
     }
+    @media (max-width: 900px){
+      .quiz-top{grid-template-columns:1fr}
+    }
+
     .emoji-box{
       border:1px dashed #c7d5e6;background:#f3f8ff;border-radius:16px;
       padding:18px;display:flex;align-items:center;justify-content:center;
-      min-height:120px;font-size:64px;flex:1
+      min-height:120px;font-size:64px;
+      position:relative;
+      overflow:hidden;
     }
-    .quiz-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+    /* Listen centered INSIDE emoji box */
+    .listen-overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      pointer-events:none; /* button handles clicks itself; we attach it separately */
+    }
+    .listen-overlay .btn{
+      pointer-events:auto;
+    }
+
+    .quiz-actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
     .choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     @media (max-width: 520px){ .choice-grid{grid-template-columns:1fr} }
     .choice{width:100%;text-align:left}
@@ -158,9 +181,15 @@
 
     <div class="panel">
       <div class="quiz-top">
-        <div class="emoji-box" id="quiz-emoji">🎧</div>
+        <div class="emoji-box" id="quiz-emoji-box">
+          <div id="quiz-emoji">🎧</div>
+          <!-- Listen centered until user clicks -->
+          <div class="listen-overlay" id="listenOverlay">
+            <button class="btn primary big" id="quiz-listen" disabled>Listen</button>
+          </div>
+        </div>
+
         <div class="quiz-actions">
-          <button class="btn primary big" id="quiz-listen" disabled>Listen</button>
           <button class="btn" id="quiz-next" disabled>Next</button>
         </div>
       </div>
@@ -211,7 +240,7 @@
   const hideStatus = ()=>{ statusEl.classList.add('hidden'); statusEl.textContent=''; };
   const showScore  = (s)=>{ statusEl.textContent = 'Score: ' + s + ' / 100'; statusEl.classList.remove('hidden'); };
 
-  // Examples for Assistant/Translator (unchanged)
+  // Examples (unchanged)
   const START_WORDS = [
     "Good morning",
     "Hello",
@@ -341,11 +370,7 @@
   });
 
   // -------------------------
-  // GAME (20 words, emoji-friendly, NO greetings)
-  // Flow:
-  // 1) Big button "Listen"
-  // 2) After listen -> show 4 options in Komi
-  // 3) Correct -> confetti + popup “picture” (emoji)
+  // GAME: image ONLY after correct + Listen centered
   // -------------------------
   const GAME_WORDS = [
     {en:"Dog", emoji:"🐶"},
@@ -381,7 +406,7 @@
   function randItem(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
   let POOL = []; // [{en, komi, emoji}]
-  let game = { current:null, choices:[], listened:false, locked:false };
+  let game = { current:null, choices:[], listened:false, locked:false, correctKomi:null };
 
   function buildPool(){
     const out = [];
@@ -399,14 +424,17 @@
 
     H('quiz-listen').onclick = ()=>{
       if (!game.current) return;
-      // show emoji (picture) first
-      H('quiz-emoji').textContent = game.current.emoji;
-      // play Komi audio
+
+      // Do NOT show image yet. Only listen.
       speakKomi(game.current.komi);
+
       // reveal options
       game.listened = true;
       H('quiz-choices').classList.remove('hidden');
       renderChoices();
+
+      // hide Listen overlay after first click
+      H('listenOverlay').style.display = 'none';
     };
 
     H('quiz-next').onclick = ()=> newRound();
@@ -415,7 +443,10 @@
   function newRound(){
     game.locked = false;
     game.listened = false;
-    H('quiz-emoji').textContent = "🎧";
+
+    // Reset UI: hide picture (no emoji), show Listen centered
+    H('quiz-emoji').textContent = "";           // nothing in the box
+    H('listenOverlay').style.display = 'flex';  // show Listen
     H('quiz-choices').classList.add('hidden');
     H('quiz-choices').innerHTML = "";
 
@@ -424,10 +455,7 @@
     const distract = shuffle(POOL.filter(x=>x.en!==game.current.en)).slice(0,3);
     const options = shuffle([game.current, ...distract]);
 
-    // choices are Komi words (text on buttons)
-    game.choices = options.map(x=>x.komi);
-
-    // map komi->isCorrect
+    game.choices = options.map(x=>x.komi);      // options in Komi
     game.correctKomi = game.current.komi;
   }
 
@@ -439,7 +467,7 @@
       b.className = 'btn choice';
       b.type = 'button';
       b.textContent = km;
-      b.onclick = ()=> pick(km, b);
+      b.onclick = ()=> pick(km);
       box.appendChild(b);
     });
   }
@@ -458,8 +486,14 @@
     });
 
     if (correct){
+      // Now show “picture” (emoji) ONLY on correct
+      H('quiz-emoji').textContent = game.current.emoji;
+
       confettiBurst();
       showPopup(game.current.emoji);
+    } else {
+      // If wrong: show Listen again so they can replay next round
+      H('listenOverlay').style.display = 'flex';
     }
   }
 
@@ -587,6 +621,7 @@
 </script>
 </body>
 </html>
+
 
 
 

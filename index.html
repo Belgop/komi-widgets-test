@@ -29,6 +29,7 @@
     .row{display:flex;gap:.7rem;flex-wrap:wrap;align-items:center}
     .btn{padding:.75rem 1.1rem;border-radius:12px;border:1px solid var(--border);background:#fff;cursor:pointer}
     .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;border:none}
+    .btn:disabled{opacity:.55;cursor:not-allowed}
     .txt{width:100%;padding:1rem;border-radius:14px;border:1px solid var(--border);font-size:18px}
     .out{min-height:70px;margin-top:12px;padding:14px;border-radius:14px;border:1px dashed #c7d5e6;background:#f3f8ff;font-size:20px}
     .badge{display:inline-block;padding:.25rem .65rem;border-radius:999px;background:#eef6ff;border:1px solid #d9e8f7;color:#194b7c;font-weight:600}
@@ -39,7 +40,7 @@
     .guide-line{color:var(--muted);font-size:15px;margin:-2px 0 12px 0}
     .guide-line a{color:#0f5bd7;text-decoration:underline}
 
-    /* NEW: clickable examples */
+    /* clickable examples */
     .examples{margin:8px 0 12px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center}
     .examples .label{font-size:14px;color:var(--muted);margin-right:6px}
     .ex-chip{
@@ -58,43 +59,41 @@
 <div class="wrap">
   <h1 class="brand">Komi widgets <span class="v">Translator & Assistant</span></h1>
 
-  <!-- TABS SWAPPED: Assistant first -->
+  <!-- Assistant first -->
   <div class="tabs">
     <button class="tab-btn active" data-tab="as">Assistant</button>
     <button class="tab-btn" data-tab="tr">Translator</button>
   </div>
 
-  <!-- Assistant FIRST (visible by default) -->
+  <!-- Assistant (visible by default) -->
   <div id="tab-as" class="card">
     <div class="title">Assistant (Speak Komi)</div>
     <div class="sub">We translate your English phrase to Komi, play it, then you repeat — and get a score.</div>
     <div class="guide-line">
-      Steps: 1) Enter a phrase (e.g. <a href="#" id="fill-gm-2">“Good morning”</a>), 2) click <b>Play Komi</b>, 3) click <b>Record & Check</b> and speak. Allow the microphone if prompted.
+      Steps: 1) Enter a phrase, 2) click <b>Play Komi</b>, 3) click <b>Record & Check</b> and speak. Allow the microphone if prompted.
     </div>
 
-    <!-- NEW examples -->
     <div class="examples" id="examples-as"></div>
     <div class="ex-note">You can also type your own phrase — examples are just shortcuts.</div>
 
     <input id="as-text" class="txt" placeholder='Try: “Good morning”' />
     <div class="row" style="margin-top:.7rem">
-      <button id="as-say" class="btn">Play Komi</button>
-      <button id="as-record" class="btn primary">Record & Check (ru-RU)</button>
-      <span id="as-status" class="badge">Ready — click “Play Komi” or “Record & Check”.</span>
+      <button id="as-say" class="btn" disabled>Play Komi</button>
+      <button id="as-record" class="btn primary" disabled>Record & Check (ru-RU)</button>
+      <span id="as-status" class="badge">Loading the dictionary…</span>
     </div>
     <div class="meter"><div id="as-bar" class="bar"></div></div>
     <div class="hint" id="as-hint"></div>
   </div>
 
-  <!-- Translator SECOND (hidden by default) -->
+  <!-- Translator (hidden by default) -->
   <div id="tab-tr" class="card hidden">
     <div class="title">English to Komi Translator</div>
     <div class="sub">Type a short English phrase. We’ll translate using a dictionary and safe transliteration.</div>
     <div class="guide-line">
-      Steps: 1) Type a phrase (e.g. <a href="#" id="fill-gm-1">“Good morning”</a>), 2) click <b>Translate</b>, 3) see the result below.
+      Steps: 1) Type a phrase, 2) click <b>Translate</b>, 3) see the result below.
     </div>
 
-    <!-- NEW examples -->
     <div class="examples" id="examples-tr"></div>
     <div class="ex-note">You can also type your own phrase — examples are just shortcuts.</div>
 
@@ -107,7 +106,6 @@
   </div>
 </div>
 
-<!-- mini-LM подключена (всегда включена, без индикации в UI) -->
 <script src="./widgets/mini-lm.js"></script>
 <script>
   const tabs={tr:document.getElementById('tab-tr'), as:document.getElementById('tab-as')};
@@ -141,18 +139,21 @@
 
   let DICT=null;
 
+  const status = t=> H('as-status').textContent=t;
+  const setScore = v=> H('as-bar').style.width = Math.max(0, Math.min(100, v)) + '%';
+
   async function loadAll(){
-    const bust = 'v=' + Date.now(); // анти-кэш
+    const bust = 'v=' + Date.now(); // cache-bust
     try{
-      // 1) база
+      // 1) base dict
       const base = await fetch(`./data/dictionary.json?${bust}`,{cache:'no-store'}).then(r=>r.json());
       let dict = {...base};
 
-      // 2) манифест оверлеев
+      // 2) overlays manifest
       const manifest = await fetch(`./data/overlays/overlay_manifest.json?${bust}`,{cache:'no-store'}).then(r=>r.json());
       if(!Array.isArray(manifest)) throw new Error('overlay_manifest.json must be an array of filenames');
 
-      // 3) подгружаем все файлы из манифеста
+      // 3) load overlays
       for (const file of manifest) {
         try{
           const ov = await fetch(`./data/overlays/${file}?${bust}`, {cache:'no-store'}).then(r=>r.json());
@@ -162,15 +163,24 @@
         }
       }
 
-      // 4) сохранить словарь и инициализировать mini-LM
+      // 4) save dict + init mini-LM
       DICT = dict;
       if (window.MiniLM && typeof window.MiniLM.init === 'function') {
         window.MiniLM.init(DICT);
       }
+
+      // enable assistant buttons
+      H('as-say').disabled = false;
+      H('as-record').disabled = false;
+      status('Ready — click “Play Komi” or “Record & Check”.');
+
       H('hint').textContent = `Ready (${Object.keys(DICT).length} keys)`;
     }catch(e){
       console.error(e);
       H('hint').textContent='Load error — open console';
+      H('as-say').disabled = true;
+      H('as-record').disabled = true;
+      status('Load error — open console');
     }
   }
 
@@ -184,11 +194,7 @@
   H('do').addEventListener('click', translate);
   H('src').addEventListener('keydown', e => { if(e.key==='Enter' && (e.ctrlKey||e.metaKey)) translate(); });
 
-  const fillGM = () => 'Good morning';
-  H('fill-gm-1').addEventListener('click', e=>{e.preventDefault(); H('src').value = fillGM();});
-  H('fill-gm-2').addEventListener('click', e=>{e.preventDefault(); H('as-text').value = fillGM();});
-
-  /* NEW: clickable examples list (shortcuts) */
+  /* Clickable examples */
   const EXAMPLES = [
     "Good morning",
     "Hello (or good day)",
@@ -225,7 +231,6 @@
       });
     });
   }
-
   renderExamples("examples-tr", "src");
   renderExamples("examples-as", "as-text");
 
@@ -234,8 +239,6 @@
     const {out} = mapLongest(toks(text), DICT||{}, 4);
     return finalize(out);
   }
-  const status = t=> H('as-status').textContent=t;
-  const setScore = v=> H('as-bar').style.width = Math.max(0, Math.min(100, v)) + '%';
 
   function speakKomi(text){
     const u=new SpeechSynthesisUtterance(text);
@@ -254,6 +257,7 @@
       .replace(/\s+/g,' ')
       .trim();
   }
+
   function levenshtein(a,b){
     const m=[]; for(let i=0;i<=a.length;i++) m[i]=[i];
     for(let j=1;j<=b.length;j++) m[0][j]=j;
@@ -264,6 +268,7 @@
     }
     return m[a.length][b.length];
   }
+
   function scoreRef(rec, ref){
     const heard = normForASR(rec);
     const target = normForASR(ref);
@@ -272,7 +277,7 @@
     const dEff = Math.max(0, dRaw - forgiveness);
     const base = Math.max(0, Math.min(100, Math.round(100 * (1 - dEff / Math.max(1, target.length)))));
 
-    // mini-LM включена, но без отображения; просто смешиваем, если готова
+    // mix mini-LM if ready
     let final = base;
     try{
       if (window.MiniLM && window.MiniLM.ready && typeof window.MiniLM.score === 'function'){
@@ -298,7 +303,11 @@
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR){ status('Microphone is not supported in this browser. Try Chrome on desktop or Android.'); return; }
     const rec=new SR(); rec.lang='ru-RU'; rec.interimResults=false; rec.maxAlternatives=1;
-    status('Listening… please speak clearly.'); setScore(0); H('as-hint').textContent='';
+
+    status('Listening… please speak clearly.');
+    setScore(0);
+    H('as-hint').textContent='';
+
     rec.onresult=(e)=>{
       const heard=e.results[0][0].transcript||'';
       const s=scoreRef(heard,target);
@@ -314,6 +323,7 @@
       status(msg);
     };
     rec.onend   =()=>{ if(H('as-status').textContent.startsWith('Listening…')) status('Ready — click “Play Komi” or “Record & Check”.'); };
+
     rec.start();
   });
 
@@ -321,3 +331,4 @@
 </script>
 </body>
 </html>
+

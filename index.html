@@ -54,39 +54,25 @@
     .section-title{display:flex;align-items:center;gap:10px;margin:0 0 10px 2px;flex-wrap:wrap}
     .section-title h2{margin:0;font-size:18px;font-weight:900}
     .pill{display:inline-flex;align-items:center;gap:6px;padding:.25rem .65rem;border-radius:999px;background:#f3f8ff;border:1px solid var(--border);font-weight:900;font-size:13px;color:#194b7c}
-    .games-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    @media (max-width: 900px){ .games-grid{grid-template-columns:1fr} }
     .panel{border:1px solid var(--border);border-radius:18px;padding:16px;background:#fff}
-    .panel h3{margin:0 0 6px 0;font-size:18px;font-weight:900}
-    .mini{font-size:14px;color:var(--muted);margin:6px 0 12px 0}
-    .divider{height:1px;background:var(--border);margin:12px 0}
+    .panel h3{margin:0 0 8px 0;font-size:18px;font-weight:900}
+    .mini{font-size:14px;color:var(--muted);margin:0 0 12px 0}
 
-    /* choices */
+    .quiz-top{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+      margin-bottom:10px
+    }
+    .emoji-box{
+      border:1px dashed #c7d5e6;background:#f3f8ff;border-radius:16px;
+      padding:18px;display:flex;align-items:center;justify-content:center;
+      min-height:120px;font-size:64px;flex:1
+    }
+    .quiz-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     @media (max-width: 520px){ .choice-grid{grid-template-columns:1fr} }
     .choice{width:100%;text-align:left}
     .choice.correct{border-color:#16a34a}
     .choice.wrong{border-color:#ef4444}
-
-    /* Picture card */
-    .picbox{
-      border:1px dashed #c7d5e6;background:#f3f8ff;border-radius:16px;
-      padding:18px;display:flex;align-items:center;justify-content:center;
-      min-height:140px;
-    }
-    .emoji{
-      font-size:64px;line-height:1;
-      filter: drop-shadow(0 8px 14px rgba(13,38,76,.12));
-      transform: translateZ(0);
-    }
-    .pulse{
-      animation:pulse .55s ease;
-    }
-    @keyframes pulse{
-      0%{transform:scale(1)}
-      50%{transform:scale(1.06)}
-      100%{transform:scale(1)}
-    }
 
     /* confetti */
     #confettiCanvas{position:fixed;inset:0;pointer-events:none;z-index:9999;display:none}
@@ -137,50 +123,27 @@
       <span class="pill">Best: <span id="best">0</span></span>
     </div>
 
-    <div class="games-grid">
-      <!-- Game 1: Picture Quiz -->
-      <div class="panel">
-        <h3>Game 1 — Picture Quiz</h3>
-        <div class="mini">Choose the correct word for the picture.</div>
+    <div class="panel">
+      <h3>Emoji + Listen + Pick</h3>
+      <div class="mini">Click Play Komi and choose the meaning in English.</div>
 
-        <div class="picbox">
-          <div id="pq-emoji" class="emoji">❓</div>
+      <div class="quiz-top">
+        <div class="emoji-box" id="quiz-emoji">⏳</div>
+        <div class="quiz-actions">
+          <button class="btn primary" id="quiz-play" disabled>Play Komi</button>
+          <button class="btn" id="quiz-next" disabled>Next</button>
+          <span class="pill">Correct: <span id="quiz-correct">0</span></span>
         </div>
-
-        <div class="divider"></div>
-
-        <div class="choice-grid" id="pq-choices"></div>
-
-        <div class="row" style="margin-top:12px">
-          <button class="btn primary" id="pq-check" disabled>Check</button>
-          <button class="btn" id="pq-next" disabled>Next</button>
-          <span class="pill">Score: <span id="pq-score">0</span></span>
-        </div>
-
-        <div class="mini" id="pq-status"></div>
       </div>
 
-      <!-- Game 2: Listen & Pick -->
-      <div class="panel">
-        <h3>Game 2 — Listen & Pick</h3>
-        <div class="mini">Click Play Komi and choose the meaning in English.</div>
-
-        <div class="row" style="margin-bottom:10px">
-          <button class="btn primary" id="lp-play" disabled>Play Komi</button>
-          <button class="btn" id="lp-next" disabled>New round</button>
-          <span class="pill">Correct: <span id="lp-correct">0</span></span>
-        </div>
-
-        <div class="mini" id="lp-status"></div>
-        <div class="choice-grid" id="lp-choices"></div>
-      </div>
+      <div class="choice-grid" id="quiz-choices"></div>
     </div>
   </div>
 </div>
 
 <script src="./widgets/mini-lm.js"></script>
 <script>
-  // Tabs switching
+  // Tabs
   const tabs={tr:document.getElementById('tab-tr'), as:document.getElementById('tab-as')};
   document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>{
     document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active'));
@@ -212,13 +175,13 @@
 
   let DICT=null;
 
-  // Assistant: score only
+  // Assistant: show ONLY score after recording
   const statusEl = H('as-status');
   const setScore = v=> H('as-bar').style.width = Math.max(0, Math.min(100, v)) + '%';
   const hideStatus = ()=>{ statusEl.classList.add('hidden'); statusEl.textContent=''; };
   const showScore  = (s)=>{ statusEl.textContent = 'Score: ' + s + ' / 100'; statusEl.classList.remove('hidden'); };
 
-  // Words we use everywhere
+  // Words
   const START_WORDS = [
     "Good morning",
     "Hello",
@@ -348,19 +311,38 @@
   });
 
   // -------------------------
-  // GAMES
+  // GAME: Emoji + Listen + Pick (merged)
   // -------------------------
-  let GAME_POOL = []; // [{en, komi}]
+  // Emoji set (simple, clear)
+  const EMOJI = {
+    "Good morning":"🌅",
+    "Hello":"👋",
+    "Good day":"☀️",
+    "Komi man":"👨",
+    "Komi woman":"👩",
+    "Child":"🧒",
+    "Forest":"🌲",
+    "Fish":"🐟",
+    "River":"🏞️",
+    "Rain":"🌧️",
+    "Dog":"🐶",
+    "Cat":"🐱",
+    "I love you":"❤️"
+  };
 
+  let GAME_POOL = []; // [{en, komi, emoji}]
   function buildGamePool(){
     const out = [];
     for (const en of START_WORDS){
       const komi = toKomi(en);
-      if (komi && komi.trim()) out.push({en, komi});
+      if (komi && komi.trim()){
+        out.push({en, komi, emoji: (EMOJI[en] || "✨")});
+      }
     }
     return out;
   }
 
+  // Stats
   function initStats(){
     const streak = Number(localStorage.getItem('komi_streak')||'0')||0;
     const best   = Number(localStorage.getItem('komi_best')||'0')||0;
@@ -388,7 +370,7 @@
       H('best').textContent = String(v);
     }
   }
-  function randItem(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
   function shuffle(a){
     const arr = a.slice();
     for(let i=arr.length-1;i>0;i--){
@@ -397,152 +379,55 @@
     }
     return arr;
   }
+  function randItem(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
-  // Game 1: Picture Quiz (emoji pictures, offline)
-  const PICS = {
-    "Dog":"🐶",
-    "Cat":"🐱",
-    "Fish":"🐟",
-    "Forest":"🌲",
-    "River":"🏞️",
-    "Rain":"🌧️",
-    "Child":"🧒",
-    "Komi man":"🧑",
-    "Komi woman":"👩",
-    "Good morning":"🌅",
-    "Hello":"👋",
-    "Good day":"☀️",
-    "I love you":"❤️"
-  };
+  let quiz = { current:null, choices:[], locked:false, correct:0 };
 
-  let pq = { current:null, selected:null, locked:false, score:0 };
+  function initQuiz(){
+    H('quiz-play').disabled = false;
+    H('quiz-next').disabled = false;
+    H('quiz-correct').textContent = '0';
+    quiz.correct = 0;
+    newQuizRound();
 
-  function initPictureQuiz(){
-    H('pq-check').disabled = false;
-    H('pq-next').disabled = false;
-    H('pq-score').textContent = '0';
-    H('pq-status').textContent = '';
-    newPicRound();
-
-    H('pq-check').onclick = ()=> pqCheck();
-    H('pq-next').onclick  = ()=> newPicRound();
-  }
-
-  function newPicRound(){
-    pq.locked = false;
-    pq.selected = null;
-    H('pq-status').textContent = '';
-    const pickables = GAME_POOL.map(x=>x.en).filter(en=>PICS[en]);
-    pq.current = randItem(pickables);
-
-    const emoji = PICS[pq.current] || "❓";
-    const el = H('pq-emoji');
-    el.textContent = emoji;
-    el.classList.remove('pulse');
-    void el.offsetWidth;
-    el.classList.add('pulse');
-
-    const distract = shuffle(pickables.filter(x=>x!==pq.current)).slice(0,3);
-    const options = shuffle([pq.current, ...distract]);
-
-    renderPicChoices(options);
-  }
-
-  function renderPicChoices(options){
-    const box = H('pq-choices');
-    box.innerHTML = '';
-    options.forEach(label=>{
-      const b = document.createElement('button');
-      b.className = 'btn choice';
-      b.type = 'button';
-      b.textContent = label;
-      b.onclick = ()=>{
-        if (pq.locked) return;
-        pq.selected = label;
-        [...box.querySelectorAll('button')].forEach(x=>x.classList.remove('correct','wrong'));
-        b.classList.add('correct'); // just highlight selection (green border)
-      };
-      box.appendChild(b);
-    });
-  }
-
-  function pqCheck(){
-    if (pq.locked) return;
-    if (!pq.selected){
-      H('pq-status').textContent = 'Choose an answer first.';
-      return;
-    }
-    pq.locked = true;
-
-    const correct = pq.current;
-    const buttons = [...H('pq-choices').querySelectorAll('button')];
-    buttons.forEach(b=>{
-      b.disabled = true;
-      b.classList.remove('correct','wrong');
-      if (b.textContent === correct) b.classList.add('correct');
-      else if (b.textContent === pq.selected) b.classList.add('wrong');
-    });
-
-    if (pq.selected === correct){
-      pq.score += 1;
-      H('pq-score').textContent = String(pq.score);
-      H('pq-status').textContent = 'Correct ✅';
-      updateBest(pq.score);
-      bumpStreak();
-      confettiBurst();
-    } else {
-      H('pq-status').textContent = 'Wrong ❌';
-    }
-  }
-
-  // Game 2: Listen & Pick
-  let lp = { current:null, choices:[], locked:false, correct:0 };
-
-  function initListenPick(){
-    H('lp-play').disabled = false;
-    H('lp-next').disabled = false;
-    lp.correct = 0;
-    H('lp-correct').textContent = '0';
-    H('lp-status').textContent = 'Click Play Komi, then choose:';
-    newRound();
-
-    H('lp-play').onclick = ()=>{
-      if (!lp.current) return;
-      speakKomi(lp.current.komi);
+    H('quiz-play').onclick = ()=>{
+      if (!quiz.current) return;
+      speakKomi(quiz.current.komi);
     };
-    H('lp-next').onclick = ()=> newRound();
+    H('quiz-next').onclick = ()=> newQuizRound();
   }
 
-  function newRound(){
-    lp.locked = false;
-    lp.current = randItem(GAME_POOL);
+  function newQuizRound(){
+    quiz.locked = false;
+    quiz.current = randItem(GAME_POOL);
 
-    const distract = shuffle(GAME_POOL.filter(x=>x.en!==lp.current.en)).slice(0,3);
-    lp.choices = shuffle([lp.current, ...distract]).map(x=>x.en);
+    H('quiz-emoji').textContent = quiz.current.emoji;
 
-    H('lp-status').textContent = 'Click Play Komi, then choose:';
-    renderChoices();
+    const distract = shuffle(GAME_POOL.filter(x=>x.en!==quiz.current.en)).slice(0,3);
+    quiz.choices = shuffle([quiz.current, ...distract]).map(x=>x.en);
+
+    renderQuizChoices();
   }
 
-  function renderChoices(){
-    const box = H('lp-choices');
+  function renderQuizChoices(){
+    const box = H('quiz-choices');
     box.innerHTML = '';
-    lp.choices.forEach(en=>{
+    quiz.choices.forEach(en=>{
       const b = document.createElement('button');
       b.className = 'btn choice';
       b.type = 'button';
       b.textContent = en;
-      b.onclick = ()=> handleChoice(en);
+      b.onclick = ()=> handleQuizChoice(en);
       box.appendChild(b);
     });
   }
 
-  function handleChoice(en){
-    if (lp.locked) return;
-    lp.locked = true;
+  function handleQuizChoice(en){
+    if (quiz.locked) return;
+    quiz.locked = true;
 
-    const correctEn = lp.current.en;
-    const buttons = [...H('lp-choices').querySelectorAll('button')];
+    const correctEn = quiz.current.en;
+    const buttons = [...H('quiz-choices').querySelectorAll('button')];
     buttons.forEach(b=>{
       if (b.textContent === correctEn) b.classList.add('correct');
       else if (b.textContent === en) b.classList.add('wrong');
@@ -550,14 +435,11 @@
     });
 
     if (en === correctEn){
-      lp.correct += 1;
-      H('lp-correct').textContent = String(lp.correct);
-      updateBest(lp.correct);
+      quiz.correct += 1;
+      H('quiz-correct').textContent = String(quiz.correct);
+      updateBest(quiz.correct);
       bumpStreak();
-      H('lp-status').textContent = 'Correct ✅';
       confettiBurst();
-    } else {
-      H('lp-status').textContent = 'Wrong ❌';
     }
   }
 
@@ -580,7 +462,7 @@
     C.style.display = 'block';
 
     const N = 140;
-    const parts = Array.from({length:N}, ()=>({
+    const parts = Array.from({length:N}, () => ({
       x: Math.random()*C.width,
       y: -20 - Math.random()*200,
       vx: (Math.random()-0.5)*6,
@@ -624,7 +506,7 @@
     confettiTimer = requestAnimationFrame(frame);
   }
 
-  // Load dictionary
+  // Load dictionary + overlays
   async function loadAll(){
     const bust = 'v=' + Date.now();
     try{
@@ -646,23 +528,24 @@
       DICT = dict;
       if (window.MiniLM && typeof window.MiniLM.init === 'function') window.MiniLM.init(DICT);
 
-      // enable assistant buttons
+      // enable buttons
       H('as-say').disabled = false;
       H('as-record').disabled = false;
 
-      // build pool once
+      // init game
       GAME_POOL = buildGamePool();
-
       initStats();
-      initPictureQuiz();
-      initListenPick();
+      initQuiz();
+
+      // set initial emoji (in case)
+      if (!GAME_POOL.length) H('quiz-emoji').textContent = "⚠️";
     }catch(e){
       console.error(e);
       H('as-say').disabled = true;
       H('as-record').disabled = true;
-
-      H('pq-status').textContent = 'Load error';
-      H('lp-status').textContent = 'Load error';
+      H('quiz-play').disabled = true;
+      H('quiz-next').disabled = true;
+      H('quiz-emoji').textContent = "⚠️";
     }
   }
 

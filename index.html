@@ -317,8 +317,6 @@
   // -------------------------
   // GAME WORDS (ONLY what you asked)
   // -------------------------
-  // IMPORTANT: picture is hidden until correct.
-  // User hears Komi, then chooses Komi option that matches the meaning (meaning comes from hidden picture revealed on correct).
   const GAME_WORDS = [
     {en:"Water",  emoji:"💧"},  // вода
     {en:"Sun",    emoji:"☀️"},  // солнце
@@ -344,7 +342,7 @@
   function randItem(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
   let POOL = []; // [{en, komi, emoji}]
-  let game = { current:null, choices:[], listened:false, locked:false, correctKomi:null };
+  let game = { current:null, choices:[], listened:false, locked:false, correctEn:null };
 
   function buildPool(){
     const out = [];
@@ -367,7 +365,7 @@
       hidePicture();
       speakKomi(game.current.komi);
 
-      // reveal Komi choices after listen
+      // reveal ENGLISH choices after listen
       game.listened = true;
       H('quiz-choices').classList.remove('hidden');
       renderChoices();
@@ -404,37 +402,38 @@
 
     game.current = randItem(POOL);
 
-    // 4 komi options: correct + 3 distractors (if pool < 4, it will use what exists)
+    // 4 options: correct + 3 distractors
     const distractors = shuffle(POOL.filter(x=>x.en!==game.current.en)).slice(0,3);
     const options = shuffle([game.current, ...distractors]);
 
-    game.choices = options.map(x=>x.komi);
-    game.correctKomi = game.current.komi;
+    // IMPORTANT CHANGE: choices are ENGLISH (not Komi)
+    game.choices = options.map(x=>x.en);
+    game.correctEn = game.current.en;
   }
 
   function renderChoices(){
     const box = H('quiz-choices');
     box.innerHTML = '';
-    game.choices.forEach(km=>{
+    game.choices.forEach(en=>{
       const b = document.createElement('button');
       b.className = 'btn choice';
       b.type = 'button';
-      b.textContent = km;
-      b.onclick = ()=> pick(km);
+      b.textContent = en;
+      b.onclick = ()=> pick(en);
       box.appendChild(b);
     });
   }
 
-  function pick(km){
+  function pick(en){
     if (!game.listened || game.locked) return;
     game.locked = true;
 
-    const correct = (km === game.correctKomi);
+    const correct = (en === game.correctEn);
     const buttons = [...H('quiz-choices').querySelectorAll('button')];
 
     buttons.forEach(btn=>{
-      if (btn.textContent === game.correctKomi) btn.classList.add('correct');
-      else if (btn.textContent === km) btn.classList.add('wrong');
+      if (btn.textContent === game.correctEn) btn.classList.add('correct');
+      else if (btn.textContent === en) btn.classList.add('wrong');
       btn.disabled = true;
     });
 
@@ -442,8 +441,6 @@
       // Picture appears ONLY NOW (after correct)
       showPicture(game.current.emoji);
       confettiBurst();
-
-      // keep it visible until Next
       H('listenOverlay').style.display = 'none';
     } else {
       // wrong: show Listen again to replay
@@ -543,7 +540,6 @@
       // game pool + start
       POOL = buildPool();
       if (POOL.length < 2){
-        // not enough to play
         H('quiz-listen').disabled = true;
         H('quiz-next').disabled = true;
         H('listenOverlay').style.display = 'none';

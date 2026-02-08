@@ -40,22 +40,15 @@
     /* clickable examples */
     .examples{margin:2px 0 14px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center}
     .examples .label{font-size:14px;color:var(--muted);margin-right:6px;font-weight:900;letter-spacing:.2px}
-    .ex-chip{
-      padding:.35rem .7rem;
-      border-radius:999px;
-      border:1px solid var(--border);
-      background:#fff;
-      cursor:pointer;
-      font-size:14px;
-    }
+    .ex-chip{padding:.35rem .7rem;border-radius:999px;border:1px solid var(--border);background:#fff;cursor:pointer;font-size:14px}
     .ex-chip:hover{transform:translateY(-1px)}
 
     /* Game */
     .section{margin-top:18px}
     .section-title{display:flex;align-items:center;gap:10px;margin:0 0 10px 2px;flex-wrap:wrap}
     .section-title h2{margin:0;font-size:18px;font-weight:900}
-
     .panel{border:1px solid var(--border);border-radius:18px;padding:16px;background:#fff}
+
     .quiz-top{
       display:grid;
       grid-template-columns: 1fr auto;
@@ -63,29 +56,39 @@
       align-items:center;
       margin-bottom:12px;
     }
-    @media (max-width: 900px){
-      .quiz-top{grid-template-columns:1fr}
-    }
+    @media (max-width: 900px){ .quiz-top{grid-template-columns:1fr} }
 
-    .emoji-box{
+    .box{
       border:1px dashed #c7d5e6;background:#f3f8ff;border-radius:16px;
       padding:18px;display:flex;align-items:center;justify-content:center;
-      min-height:120px;font-size:64px;
+      min-height:140px;
       position:relative;
       overflow:hidden;
     }
 
-    /* Listen centered INSIDE emoji box */
+    /* Listen centered INSIDE the box */
     .listen-overlay{
       position:absolute;
       inset:0;
       display:flex;
       align-items:center;
       justify-content:center;
-      pointer-events:none; /* button handles clicks itself; we attach it separately */
+      pointer-events:none;
     }
-    .listen-overlay .btn{
-      pointer-events:auto;
+    .listen-overlay .btn{pointer-events:auto}
+
+    /* Hidden “picture” container inside the box (shows ONLY after correct) */
+    .pic{
+      font-size:84px;
+      line-height:1;
+      opacity:0;
+      transform:scale(.96);
+      transition:opacity .18s ease, transform .18s ease;
+      user-select:none;
+    }
+    .pic.show{
+      opacity:1;
+      transform:scale(1);
     }
 
     .quiz-actions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
@@ -95,49 +98,12 @@
     .choice.correct{border-color:#16a34a}
     .choice.wrong{border-color:#ef4444}
 
-    /* popup (emoji “picture”) */
-    .pop{position:fixed;inset:0;display:none;place-items:center;z-index:10000}
-    .pop.show{display:grid}
-    .pop .back{position:absolute;inset:0;background:rgba(11,18,48,.35)}
-    .pop .box{
-      position:relative;
-      background:#fff;
-      border:1px solid var(--border);
-      border-radius:22px;
-      box-shadow:0 24px 70px rgba(13,38,76,.22);
-      padding:22px 26px;
-      min-width:min(520px,92vw);
-      text-align:center;
-      animation:popIn .22s ease-out;
-    }
-    @keyframes popIn{
-      from{transform:translateY(10px) scale(.96); opacity:.0}
-      to{transform:translateY(0) scale(1); opacity:1}
-    }
-    .pop .pic{
-      font-size:84px;
-      line-height:1;
-      margin:6px 0 10px 0;
-    }
-    .pop .ok{
-      margin-top:12px;
-    }
-
     /* confetti */
     #confettiCanvas{position:fixed;inset:0;pointer-events:none;z-index:9999;display:none}
   </style>
 </head>
 <body>
 <canvas id="confettiCanvas"></canvas>
-
-<!-- popup -->
-<div class="pop" id="pop">
-  <div class="back" id="popBack"></div>
-  <div class="box">
-    <div class="pic" id="popPic">🎉</div>
-    <button class="btn primary ok" id="popOk">OK</button>
-  </div>
-</div>
 
 <div class="wrap">
   <h1 class="brand">Komi widgets <span class="v">Translator & Assistant</span></h1>
@@ -181,9 +147,11 @@
 
     <div class="panel">
       <div class="quiz-top">
-        <div class="emoji-box" id="quiz-emoji-box">
-          <div id="quiz-emoji">🎧</div>
-          <!-- Listen centered until user clicks -->
+        <div class="box" id="quiz-box">
+          <!-- picture (NOT visible until correct) -->
+          <div class="pic" id="quiz-pic" aria-hidden="true">✨</div>
+
+          <!-- Listen centered until clicked -->
           <div class="listen-overlay" id="listenOverlay">
             <button class="btn primary big" id="quiz-listen" disabled>Listen</button>
           </div>
@@ -242,39 +210,19 @@
 
   // Examples (unchanged)
   const START_WORDS = [
-    "Good morning",
-    "Hello",
-    "Good day",
-    "Komi man",
-    "Komi woman",
-    "Child",
-    "Forest",
-    "Fish",
-    "River",
-    "Rain",
-    "Dog",
-    "Cat",
-    "I love you"
+    "Good morning","Hello","Good day","Komi man","Komi woman","Child","Forest","Fish","River","Rain","Dog","Cat","I love you"
   ];
-
   function renderExamples(containerId, inputId){
     const box = document.getElementById(containerId);
     if(!box) return;
-
     box.innerHTML =
       `<span class="label">TRY THESE WORDS:</span>` +
-      START_WORDS.map(t =>
-        `<button type="button" class="ex-chip" data-fill="${t.replace(/"/g,'&quot;')}">${t}</button>`
-      ).join("");
-
+      START_WORDS.map(t => `<button type="button" class="ex-chip" data-fill="${t.replace(/"/g,'&quot;')}">${t}</button>`).join("");
     box.querySelectorAll(".ex-chip").forEach(btn=>{
       btn.addEventListener("click", ()=>{
         const v = btn.getAttribute("data-fill") || "";
         const input = document.getElementById(inputId);
-        if(input){
-          input.value = v;
-          input.focus();
-        }
+        if(input){ input.value = v; input.focus(); }
       });
     });
   }
@@ -294,8 +242,7 @@
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   }
   function normForASR(s){
-    return String(s||'')
-      .toLowerCase()
+    return String(s||'').toLowerCase()
       .replace(/ё/g,'е').replace(/ӧ/g,'о').replace(/й/g,'и')
       .replace(/[’'`]/g,'')
       .replace(/[^a-zа-я\- ]/g,'')
@@ -319,7 +266,6 @@
     const forgiveness = Math.floor(target.length / 6);
     const dEff = Math.max(0, dRaw - forgiveness);
     const base = Math.max(0, Math.min(100, Math.round(100 * (1 - dEff / Math.max(1, target.length)))));
-
     let final = base;
     try{
       if (window.MiniLM && window.MiniLM.ready && typeof window.MiniLM.score === 'function'){
@@ -349,7 +295,6 @@
   H('as-record').addEventListener('click', ()=>{
     const en=(H('as-text').value||'').trim();
     if(!en) return;
-
     const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR) return;
 
@@ -370,29 +315,22 @@
   });
 
   // -------------------------
-  // GAME: image ONLY after correct + Listen centered
+  // GAME WORDS (ONLY what you asked)
   // -------------------------
+  // IMPORTANT: picture is hidden until correct.
+  // User hears Komi, then chooses Komi option that matches the meaning (meaning comes from hidden picture revealed on correct).
   const GAME_WORDS = [
-    {en:"Dog", emoji:"🐶"},
-    {en:"Cat", emoji:"🐱"},
-    {en:"Fish", emoji:"🐟"},
-    {en:"Bird", emoji:"🐦"},
-    {en:"Horse", emoji:"🐴"},
-    {en:"Bear", emoji:"🐻"},
-    {en:"Tree", emoji:"🌳"},
-    {en:"Forest", emoji:"🌲"},
-    {en:"River", emoji:"🌊"},
-    {en:"Rain", emoji:"🌧️"},
-    {en:"Snow", emoji:"❄️"},
-    {en:"Sun", emoji:"☀️"},
-    {en:"Moon", emoji:"🌙"},
-    {en:"Star", emoji:"⭐"},
-    {en:"Fire", emoji:"🔥"},
-    {en:"Water", emoji:"💧"},
-    {en:"House", emoji:"🏠"},
-    {en:"Car", emoji:"🚗"},
-    {en:"Book", emoji:"📘"},
-    {en:"Bread", emoji:"🍞"}
+    {en:"Water",  emoji:"💧"},  // вода
+    {en:"Sun",    emoji:"☀️"},  // солнце
+    {en:"Forest", emoji:"🌲"},  // лес
+    {en:"Dog",    emoji:"🐶"},  // собака
+    {en:"Fish",   emoji:"🐟"},  // рыба
+    {en:"Cat",    emoji:"🐱"},  // кошка
+    {en:"Spoon",  emoji:"🥄"},  // ложка
+    {en:"House",  emoji:"🏠"},  // дом
+    {en:"Fire",   emoji:"🔥"},  // огонь
+    {en:"Red",    emoji:"🟥"},  // красный
+    {en:"Green",  emoji:"🟩"}   // зеленый
   ];
 
   function shuffle(a){
@@ -425,37 +363,52 @@
     H('quiz-listen').onclick = ()=>{
       if (!game.current) return;
 
-      // Do NOT show image yet. Only listen.
+      // still NO picture
+      hidePicture();
       speakKomi(game.current.komi);
 
-      // reveal options
+      // reveal Komi choices after listen
       game.listened = true;
       H('quiz-choices').classList.remove('hidden');
       renderChoices();
 
-      // hide Listen overlay after first click
+      // hide Listen overlay after click
       H('listenOverlay').style.display = 'none';
     };
 
     H('quiz-next').onclick = ()=> newRound();
   }
 
+  function hidePicture(){
+    const pic = H('quiz-pic');
+    pic.classList.remove('show');
+    pic.textContent = "✨";
+    pic.setAttribute('aria-hidden','true');
+  }
+  function showPicture(emoji){
+    const pic = H('quiz-pic');
+    pic.textContent = emoji;
+    pic.classList.add('show');
+    pic.removeAttribute('aria-hidden');
+  }
+
   function newRound(){
     game.locked = false;
     game.listened = false;
 
-    // Reset UI: hide picture (no emoji), show Listen centered
-    H('quiz-emoji').textContent = "";           // nothing in the box
-    H('listenOverlay').style.display = 'flex';  // show Listen
+    // Reset UI: picture hidden, Listen centered, no choices
+    hidePicture();
+    H('listenOverlay').style.display = 'flex';
     H('quiz-choices').classList.add('hidden');
     H('quiz-choices').innerHTML = "";
 
     game.current = randItem(POOL);
 
-    const distract = shuffle(POOL.filter(x=>x.en!==game.current.en)).slice(0,3);
-    const options = shuffle([game.current, ...distract]);
+    // 4 komi options: correct + 3 distractors (if pool < 4, it will use what exists)
+    const distractors = shuffle(POOL.filter(x=>x.en!==game.current.en)).slice(0,3);
+    const options = shuffle([game.current, ...distractors]);
 
-    game.choices = options.map(x=>x.komi);      // options in Komi
+    game.choices = options.map(x=>x.komi);
     game.correctKomi = game.current.komi;
   }
 
@@ -486,28 +439,17 @@
     });
 
     if (correct){
-      // Now show “picture” (emoji) ONLY on correct
-      H('quiz-emoji').textContent = game.current.emoji;
-
+      // Picture appears ONLY NOW (after correct)
+      showPicture(game.current.emoji);
       confettiBurst();
-      showPopup(game.current.emoji);
+
+      // keep it visible until Next
+      H('listenOverlay').style.display = 'none';
     } else {
-      // If wrong: show Listen again so they can replay next round
+      // wrong: show Listen again to replay
       H('listenOverlay').style.display = 'flex';
     }
   }
-
-  // Popup
-  const pop = H('pop');
-  function showPopup(emoji){
-    H('popPic').textContent = emoji;
-    pop.classList.add('show');
-  }
-  function hidePopup(){
-    pop.classList.remove('show');
-  }
-  H('popOk').addEventListener('click', hidePopup);
-  H('popBack').addEventListener('click', hidePopup);
 
   // -------------------------
   // CONFETTI
@@ -600,10 +542,13 @@
 
       // game pool + start
       POOL = buildPool();
-      if (!POOL.length){
-        H('quiz-emoji').textContent = "⚠️";
+      if (POOL.length < 2){
+        // not enough to play
         H('quiz-listen').disabled = true;
         H('quiz-next').disabled = true;
+        H('listenOverlay').style.display = 'none';
+        H('quiz-pic').textContent = "⚠️";
+        H('quiz-pic').classList.add('show');
         return;
       }
       initGame();
@@ -611,9 +556,11 @@
       console.error(e);
       H('as-say').disabled = true;
       H('as-record').disabled = true;
-      H('quiz-emoji').textContent = "⚠️";
       H('quiz-listen').disabled = true;
       H('quiz-next').disabled = true;
+      H('listenOverlay').style.display = 'none';
+      H('quiz-pic').textContent = "⚠️";
+      H('quiz-pic').classList.add('show');
     }
   }
 

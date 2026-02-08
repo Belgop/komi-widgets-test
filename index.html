@@ -315,7 +315,7 @@
   });
 
   // -------------------------
-  // GAME WORDS (ONLY what you asked)
+  // GAME WORDS (spoon REMOVED, choices are ENGLISH)
   // -------------------------
   const GAME_WORDS = [
     {en:"Water",  emoji:"💧"},  // вода
@@ -324,7 +324,6 @@
     {en:"Dog",    emoji:"🐶"},  // собака
     {en:"Fish",   emoji:"🐟"},  // рыба
     {en:"Cat",    emoji:"🐱"},  // кошка
-    {en:"Spoon",  emoji:"🥄"},  // ложка
     {en:"House",  emoji:"🏠"},  // дом
     {en:"Fire",   emoji:"🔥"},  // огонь
     {en:"Red",    emoji:"🟥"},  // красный
@@ -361,7 +360,7 @@
     H('quiz-listen').onclick = ()=>{
       if (!game.current) return;
 
-      // still NO picture
+      // still NO picture before correct
       hidePicture();
       speakKomi(game.current.komi);
 
@@ -406,7 +405,7 @@
     const distractors = shuffle(POOL.filter(x=>x.en!==game.current.en)).slice(0,3);
     const options = shuffle([game.current, ...distractors]);
 
-    // IMPORTANT CHANGE: choices are ENGLISH (not Komi)
+    // choices are ENGLISH
     game.choices = options.map(x=>x.en);
     game.correctEn = game.current.en;
   }
@@ -438,7 +437,7 @@
     });
 
     if (correct){
-      // Picture appears ONLY NOW (after correct)
+      // Picture appears ONLY after correct
       showPicture(game.current.emoji);
       confettiBurst();
       H('listenOverlay').style.display = 'none';
